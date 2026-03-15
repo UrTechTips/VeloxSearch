@@ -79,6 +79,10 @@ def test_persistence_load_and_search(tmp_path, sample_documents):
 
     # First run: index
     service = SearchService(dataset_id=dataset_id, path=str(path))
+    service.dataset.config = {
+        "searchable_fields": ["title", "description"],
+        "vector_terms": ["title", "description"],
+    }
     service.index(sample_documents)
 
     # Simulate app restart
@@ -91,7 +95,6 @@ def test_persistence_load_and_search(tmp_path, sample_documents):
     results = service.search("Galaxy", top_k=3)
 
     assert len(results["results"]) == 3
-    print(results)
     assert results["results"][0]["id"] == "2"
 
 # def test_add_documents_updates_index(temp_search_service: SearchService, sample_documents):

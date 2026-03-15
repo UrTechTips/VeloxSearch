@@ -50,7 +50,7 @@ class Ranker:
             return []
 
         results = []
-        for doc_id in candidate_doc_ids:
+        for doc_id in sorted(candidate_doc_ids):
             bm25_score = bm25_scores.get(doc_id, 0.0)
             vector_score = vector_scores.get(doc_id, 0.0)
 
@@ -66,5 +66,13 @@ class Ranker:
                 "vector_score": vector_score
             })
 
-        results.sort(key=lambda x: x["combined_score"], reverse=True)
+        # Deterministic ordering for score ties across different Python processes.
+        results.sort(
+            key=lambda x: (
+                -x["combined_score"],
+                -x["bm25_score"],
+                -x["vector_score"],
+                str(x["id"]),
+            )
+        )
         return results[:k]
