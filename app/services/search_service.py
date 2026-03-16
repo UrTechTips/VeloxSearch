@@ -57,7 +57,7 @@ class SearchService:
             Self: The instance of the SearchService.
         """
         for document in documents:
-            self.dataset.add_document(document)
+            self.dataset.add_document(document) # TODO: This is redundant, as the indexer will also add the document to the dataset. We should refactor this to avoid double adding.
             self.indexer.add_document(document)
 
         self.inverted_index = self.indexer.get_inverted_index()
