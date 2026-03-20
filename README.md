@@ -1,113 +1,192 @@
-# Hybrid Search Engine (BM25 + Vector Search)
+# Hybrid Search Engine (BM25 + Vector)
 
-![Python](https://img.shields.io/badge/python-3.12+-blue)
-![Tests](https://img.shields.io/badge/tests-pytest-green)
-![License](https://img.shields.io/badge/license-not%20specified-lightgrey)
+![Python](https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white)
+![Status](https://img.shields.io/badge/status-active%20development-orange)
 
-A lightweight Python search engine that combines lexical relevance (BM25) with semantic similarity (SentenceTransformers + HNSW) to return better ranked results.
+A local-first hybrid retrieval engine that combines lexical relevance (BM25) and semantic similarity (Sentence Transformers + HNSW) to return high-quality ranked results.
 
-## What this project does
+## What This Project Does
 
-This project provides a hybrid retrieval pipeline over document datasets:
+This project provides a document search pipeline you can embed in Python applications:
 
-- Stores documents and dataset config on disk
-- Builds an inverted index for lexical search
-- Builds a vector index for semantic search
-- Combines BM25 and vector scores in a ranker
-- Returns ranked documents through `SearchService`
+- Persists datasets to disk
+- Builds an inverted index for lexical retrieval
+- Builds an HNSW vector index for semantic retrieval
+- Merges both signals with weighted hybrid ranking
+- Returns ranked documents plus score metadata
 
-Core implementation lives in [app/services](app/services), with behavior covered by tests in [tests](tests).
+The main integration entry point is `SearchService` in [app/services/search_service.py](app/services/search_service.py).
 
-## Why this project is useful
+## Why This Project Is Useful
 
-- **Better ranking quality**: combines keyword matching and semantic similarity
-- **Simple local persistence**: indexes and datasets are stored in `data/<dataset_id>/...`
-- **Modular design**: dataset, indexing, ranking, and search are separated into focused services
-- **Fast retrieval**: HNSW index (`hnswlib`) enables efficient vector nearest-neighbor lookup
-- **Tested components**: unit/integration-style tests for tokenizer, dataset, indexer, ranker, BM25, and vector search
+- Better relevance than lexical-only search: hybrid BM25 + vector scoring
+- Local persistence: indexes and data are stored under `data/<dataset_id>/...`
+- Clean architecture: dataset, indexing, ranking, and retrieval are modular services
+- Incremental updates: add new documents and refresh indexes via service methods
+- Good test coverage for the core pipeline in [tests/services](tests/services)
 
-## How to get started
+## How To Get Started
 
-### 1) Set up Python environment
+### 1. Install dependencies
 
 From the repository root:
 
 ```bash
-python3 -m venv .env
-source .env/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install --upgrade pip
-pip install pytest nltk sentence-transformers hnswlib
+pip install -r requirements.txt
 ```
 
 Notes:
-- `SentenceTransformer("all-MiniLM-L6-v2")` downloads model files on first run.
-- `nltk` tokenizer resources are downloaded when `app/services/tokenizer.py` is imported.
 
-### 2) Index and search documents (minimal example)
+- The first vector operation downloads `all-MiniLM-L6-v2` model assets.
+- Tokenization uses NLTK and downloads `punkt_tab` during tokenizer import.
+
+### 2. Index and search documents
 
 ```python
 from app.services.search_service import SearchService
 
 documents = [
-    {"id": "1", "title": "Apple iPhone 15", "description": "Latest Apple smartphone"},
-    {"id": "2", "title": "Samsung Galaxy S24", "description": "Android flagship phone"},
-    {"id": "3", "title": "Apple MacBook Pro", "description": "Powerful laptop for developers"},
+    {
+        "id": "1",
+        "title": "Apple iPhone 15",
+        "description": "Latest Apple smartphone",
+    },
+    {
+        "id": "2",
+        "title": "Samsung Galaxy S24",
+        "description": "Android flagship phone",
+    },
+    {
+        "id": "3",
+        "title": "Apple MacBook Pro",
+        "description": "Powerful laptop for developers",
+    },
 ]
 
 service = SearchService(dataset_id="products", path="data/products")
 
-# Required config fields for indexing/ranking
+# Required for indexing and ranking.
 service.dataset.config = {
     "searchable_fields": ["title", "description"],
     "vector_terms": ["title", "description"],
 }
 
 service.index(documents)
-results = service.search("Apple laptop", top_k=3)
 
-print(results["results"])  # matched documents
-print(results["meta"])     # scoring metadata (bm25/vector/combined)
+results = service.search("apple laptop", top_k=3)
+print(results["results"])  # ranked documents
+print(results["meta"])     # bm25/vector/combined scores
 ```
 
-### 3) Run tests
+### 3. Load persisted indexes in a new process
+
+```python
+from app.services.search_service import SearchService
+
+service = SearchService(dataset_id="products", path="data/products")
+service.load()
+
+results = service.search("android phone", top_k=3)
+print(results)
+```
+
+### 4. Run the test suite
 
 ```bash
 pytest -q tests/
 ```
 
-Useful test entry points:
-- [tests/test_search_service.py](tests/test_search_service.py)
-- [tests/test_vector_search.py](tests/test_vector_search.py)
-- [tests/test_bm25.py](tests/test_bm25.py)
+Useful test files:
 
-### 4) Project layout
+- [tests/services/test_search_service.py](tests/services/test_search_service.py)
+- [tests/services/test_vector_search.py](tests/services/test_vector_search.py)
+- [tests/services/test_ranker.py](tests/services/test_ranker.py)
 
-- [app/services](app/services): dataset, tokenizer, indexing, ranking, and search pipeline
-- [app/api/v1](app/api/v1): API route module placeholders
-- [data](data): persisted datasets and indexes
-- [tests](tests): test suite
+### 5. Project layout
 
-## Where users can get help
+```text
+.
+|-- .gitignore
+|-- README.md
+|-- app/
+|   |-- api/
+|   |   `-- v1/
+|   |       |-- apikeys.py
+|   |       |-- datasets.py
+|   |       `-- search.py
+|   |-- core/
+|   |-- db/
+|   |   |-- database.py
+|   |   `-- manager.py
+|   |-- main.py
+|   |-- models/
+|   |-- schemas/
+|   |   |-- datasets_schema.py
+|   |   `-- user_schema.py
+|   `-- services/
+|       |-- bm25.py
+|       |-- dataset.py
+|       |-- indexer.py
+|       |-- inverted_index.py
+|       |-- ranker.py
+|       |-- search_service.py
+|       |-- tokenizer.py
+|       `-- vector_search.py
+|-- data/
+|   |-- docs/
+|   |-- mock_dataset/
+|   |   `-- vector/
+|   |       |-- id_map.json
+|   |       `-- vector_index.bin
+|   `-- test_dataset/
+|       |-- inverted/
+|       `-- vector/
+|           |-- id_map.json
+|           `-- vector_index.bin
+|-- docs/
+|-- requirements.txt
+|-- scripts/
+|-- search_test.db
+`-- tests/
+    |-- database/
+    |   |-- test_database_manager.py
+    |   `-- test_db.py
+    `-- services/
+        |-- test_bm25.py
+        |-- test_dataset.py
+        |-- test_indexer.py
+        |-- test_inverted_index.py
+        |-- test_ranker.py
+        |-- test_search_service.py
+        |-- test_tokenizer.py
+        `-- test_vector_search.py
+```
 
-- Start with the tests in [tests](tests) to see expected usage patterns.
-- Review service code in [app/services](app/services) for extension points.
-- For issues in your copy/fork, open an issue or discussion in your repository.
+This tree excludes local environment and cache directories such as `.env/` and `__pycache__/`.
 
-## Who maintains and contributes
+## Where To Get Help
+
+- Read the service tests in [tests/services](tests/services) for real usage patterns.
+- Inspect core implementations in [app/services](app/services).
+- Use repository issues/discussions in your host platform for bug reports and questions.
+
+## Who Maintains And Contributes
 
 ### Maintainers
 
-Maintainer metadata is not declared in this workspace yet (no repository metadata file was found). Add maintainers here once available.
+Maintainer information is not yet declared in repository metadata. Add maintainers in this section when available.
 
 ### Contributing
 
-Contributions are welcome.
+Contributions are welcome. A lightweight workflow:
 
-Recommended workflow:
+1. Create a feature branch.
+2. Add or update tests in [tests](tests).
+3. Run `pytest -q tests/` locally.
+4. Open a pull request with behavior changes and test evidence.
 
-1. Create a feature branch
-2. Add or update tests in [tests](tests)
-3. Run `pytest -q tests/`
-4. Open a pull request with a clear summary of behavior changes
-
-If you add contribution policy files, prefer linking them here (for example, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`).
+If you later add a contributor guide, link it here (for example `CONTRIBUTING.md`).

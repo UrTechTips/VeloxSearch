@@ -2,6 +2,7 @@ from typing import Optional, Dict
 from app.db.manager import DatabaseManager
 from app.schemas.datasets_schema import schema as dataset_schema
 from app.schemas.user_schema import schema as user_schema
+from app.utils.schema_utils import schema_to_insert_sql
 
 class DatabaseService:
     def __init__(self, db_manager: DatabaseManager):
@@ -31,16 +32,11 @@ class DatabaseService:
             return {"datasets": [dict(row) for row in results]}
         
     def insert_dataset(self, dataset_id: str, user_id: str, **kwargs) -> bool:
+        # TODO: Validate kwargs against dataset_schema before inserting either in this file or in utils/schema_utils.py
         with self.db_manager as conn:
             cursor = conn.cursor()
             try:
-                fields = ", ".join(dataset_schema['fields'])
-                placeholders = ", ".join(["?"] * len(dataset_schema['fields']))
-                values = [dataset_id, user_id] + [kwargs.get(field) for field in dataset_schema['fields'] if field not in ["dataset_id", "user_id"]]
-                cursor.execute(
-                    f"INSERT INTO datasets ({fields}) VALUES ({placeholders})",
-                    tuple(values)
-                )
+                cursor.execute(schema_to_insert_sql("datasets", dataset_schema, dataset_id=dataset_id, user_id=user_id, **kwargs))
                 conn.commit()
                 return True
             except Exception as e:
@@ -51,13 +47,7 @@ class DatabaseService:
         with self.db_manager as conn:
             cursor = conn.cursor()
             try:
-                fields = ", ".join(user_schema['fields'])
-                placeholders = ", ".join(["?"] * len(user_schema['fields']))
-                values = [user_id] + [kwargs.get(field) for field in user_schema['fields'] if field != "user_id"]
-                cursor.execute(
-                    f"INSERT INTO users ({fields}) VALUES ({placeholders})",
-                    tuple(values)
-                )
+                cursor.execute(schema_to_insert_sql("users", user_schema, user_id=user_id, **kwargs))
                 conn.commit()
                 return True
             except Exception as e:
