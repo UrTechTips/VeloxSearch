@@ -25,7 +25,7 @@ schema = {
         {
             "field": "owner_id",
             "reference_table": "users",
-            "reference_field": "user_id"
+            "reference_field": "id"
         }
     ]
 }

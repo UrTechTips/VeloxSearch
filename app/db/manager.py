@@ -10,6 +10,7 @@ class DatabaseManager:
         """Allows use of 'with DatabaseManager(name) as conn:'"""
         try:
             self.connection = sqlite3.connect(self.db_name)
+            self.connection.row_factory = sqlite3.Row  # Enable dict-like access to rows
             return self.connection
         except sqlite3.Error as e:
             raise ConnectionError(f"Database connection failed: {e}")

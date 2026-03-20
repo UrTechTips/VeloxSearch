@@ -22,8 +22,10 @@
 |   |-- main.py
 |   |-- models/
 |   |-- schemas/
+|   |   |-- apikeys_schema.py
 |   |   |-- datasets_schema.py
-|   |   `-- user_schema.py
+|   |   |-- feedback_schema.py
+|   |   |-- usage_schema.py
 |   `-- services/
 |       |-- bm25.py
 |       |-- dataset.py

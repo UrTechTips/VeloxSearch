@@ -237,16 +237,16 @@ def test_get_apikey_usage_rate_and_quota(db_service):
         )
         conn.commit()
 
-    rate = db_service.get_apikey_useagerate("quota-hash")
-    quota = db_service.get_apikey_useagequota("quota-hash")
+    rate = db_service.get_apikey_usagerate("quota-hash")
+    quota = db_service.get_apikey_usagequota("quota-hash")
 
     assert rate == 2
     assert quota == 3
 
 
 def test_get_apikey_usage_rate_and_quota_return_none_for_unknown_hash(db_service):
-    assert db_service.get_apikey_useagerate("missing-hash") is None
-    assert db_service.get_apikey_useagequota("missing-hash") is None
+    assert db_service.get_apikey_usagerate("missing-hash") is None
+    assert db_service.get_apikey_usagequota("missing-hash") is None
 
 
 def test_insert_feedback(db_service):
@@ -285,19 +285,19 @@ def test_insert_feedback(db_service):
             ("feedback_1",),
         ).fetchone()
 
-    assert row == (
-        "feedback_1",
-        "feedback_dataset",
-        "q-feedback",
-        "doc-1",
-        1,
-    )
+    assert dict(row) == {
+        "id": "feedback_1",
+        "dataset_id": "feedback_dataset",
+        "query_hash": "q-feedback",
+        "clicked_doc_id": "doc-1",
+        "position": 1,
+    }
 
 
-@pytest.mark.xfail(
-    raises=ValueError,
-    reason="DatabaseService.list_datasets uses dict(row) on tuple rows; requires sqlite3.Row row_factory or explicit mapping",
-)
+# @pytest.mark.xfail(
+#     raises=ValueError,
+#     reason="DatabaseService.list_datasets uses dict(row) on tuple rows; requires sqlite3.Row row_factory or explicit mapping",
+# )
 def test_list_datasets_for_user_returns_items(db_service):
     db_service.insert_user(
         "list_owner",
@@ -331,5 +331,5 @@ def test_list_datasets_for_user_returns_items(db_service):
 
     assert "datasets" in result
     assert len(result["datasets"]) == 2
-    dataset_ids = {row["dataset_id"] for row in result["datasets"]}
+    dataset_ids = {row["id"] for row in result["datasets"]}
     assert dataset_ids == {"list_ds_1", "list_ds_2"}

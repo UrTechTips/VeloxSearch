@@ -76,6 +76,12 @@ class Indexer:
         self.inverted_index.open_index()
         self.vector_search.load_index()
 
+    def save_index(self) -> None:
+        """Save the index for the dataset.
+        """
+        self.inverted_index.save_index()
+        self.vector_search.save_index()
+
     def get_inverted_index(self) -> InvertedIndex:
         """Get the inverted index.
 

@@ -1,7 +1,16 @@
 import json
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple, List, Any
 
 def schema_to_create_table_sql(table_name: str, schema: Dict) -> str:
+    """
+    Generate SQL for creating a table based on its schema.
+
+    Args:
+        table_name: The name of the table to create.
+        schema: The schema definition of the table.
+    Returns:
+        A string containing the SQL create table statement.
+    """
     primary_key = schema.get("primary_key")
     required = set(schema.get("required_fields", []))
     unique = set(schema.get("unique_fields", []))
@@ -40,31 +49,56 @@ def schema_to_create_table_sql(table_name: str, schema: Dict) -> str:
 
     return create_str.strip()
 
-def format_sql_value(value):
+def _format_sql_value(value: Any) -> str:
+    """Get the input value as a string formatted for SQL insertion.
+
+    Args:
+        value (Any[str, int, bool, Dict]): The value to format.
+
+    Returns:
+        str: The formatted value as a string.
+    """
     if value is None:
         return "NULL"
     if isinstance(value, str):
-        return f"'{value}'"
+        return f"{value}"
     if isinstance(value, bool):
         return "TRUE" if value else "FALSE"
     if isinstance(value, (dict, list)):
-        return f"'{json.dumps(value)}'"
+        return f"{json.dumps(value)}"
     return str(value)
 
-def schema_to_insert_sql(table_name: str, schema: Dict, **values) -> Optional[str]:
+def schema_to_insert_sql(table_name: str, schema: Dict, **values) -> Optional[Tuple[str, Tuple]]:
+    """
+    Generate SQL for inserting a new row into a table based on its schema.
+
+    Args:
+        table_name: The name of the table to insert into.
+        schema: The schema definition of the table.
+        **values: The values to insert, as keyword arguments.
+
+    Returns:
+        A tuple containing the SQL insert statement and a tuple of values to insert, or None if no values are provided.
+
+    Raises:
+        ValueError: If any provided field is not defined in the schema.
+    """
     if not values:
         return None
 
-    fields = []
-    formatted_values = []
+    all_fields = set(schema.get("fields", []))
+    for field in values.keys():
+        if field not in all_fields:
+            raise ValueError(f"Field '{field}' is not defined in the schema for table '{table_name}'")
 
-    for field, value in values.items():
-        fields.append(field)
-        formatted_values.append(format_sql_value(value))
+    fields = ", ".join(values.keys())
+    placeholders = ", ".join(["?"] * len(values))
 
     insert_str = f"""
-    INSERT INTO {table_name} ({", ".join(fields)})
-    VALUES ({", ".join(formatted_values)});
+    INSERT INTO {table_name} ({fields})
+    VALUES ({placeholders});
     """
 
-    return insert_str.strip()
+    data_values = tuple(_format_sql_value(v) for v in values.values())
+
+    return insert_str.strip(), data_values
