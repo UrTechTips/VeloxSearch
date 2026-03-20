@@ -97,27 +97,28 @@ def test_persistence_load_and_search(tmp_path, sample_documents):
     assert len(results["results"]) == 3
     assert results["results"][0]["id"] == "2"
 
-# def test_add_documents_updates_index(temp_search_service: SearchService, sample_documents):
-#     """
-#     Incremental document addition should be searchable.
-#     """
-#     service = temp_search_service
-#     service.index(sample_documents[:2])
+def test_add_documents_updates_index(temp_search_service: SearchService, sample_documents):
+    """
+    Incremental document addition should be searchable.
+    """
+    service = temp_search_service
+    service.index(sample_documents[:2])
 
-#     new_docs = [
-#         {
-#             "id": "99",
-#             "title": "Apple Watch Ultra",
-#             "description": "Smartwatch for fitness and outdoors",
-#         }
-#     ]
+    new_docs = [
+        {
+            "id": "99",
+            "title": "Apple Watch Ultra",
+            "description": "Smartwatch for fitness and outdoors",
+        }
+    ]
 
-#     service.add_documents(new_docs)
+    service.add_documents(new_docs)
 
-#     results = service.search("Watch", top_k=5)
-#     ids = {doc["id"] for doc in results}
+    results = service.search("Watch", top_k=5)
+    print(results)
+    ids = {doc["id"] for doc in results['results']}
 
-#     assert "99" in ids
+    assert "99" in ids
 
 def test_search_returns_documents_not_scores(temp_search_service, sample_documents):
     """

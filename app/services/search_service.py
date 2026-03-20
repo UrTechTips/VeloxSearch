@@ -57,8 +57,9 @@ class SearchService:
             Self: The instance of the SearchService.
         """
         for document in documents:
-            self.dataset.add_document(document)
+            # The indexer is responsible for adding the document to the dataset and updating indexes.
             self.indexer.add_document(document)
+            self.indexer.save_index() # TODO: Add tests for this method
 
         self.inverted_index = self.indexer.get_inverted_index()
         self.vector_search = self.indexer.get_vector_search()
