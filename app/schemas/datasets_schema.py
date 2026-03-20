@@ -1,6 +1,6 @@
 schema = {
     "fields": [
-        "dataset_id",
+        "id",
         "owner_id",
         "name",
         "description",
@@ -10,7 +10,7 @@ schema = {
         "updated_at"
     ],
     "types": {
-        "dataset_id": "TEXT",
+        "id": "TEXT",
         "owner_id": "TEXT",
         "name": "TEXT",
         "description": "TEXT",
@@ -19,15 +19,15 @@ schema = {
         "created_at": "TIMESTAMP",
         "updated_at": "TIMESTAMP"
     },
-    "primary_key": "dataset_id",
-    "required_fields": ["dataset_id", "owner_id", "name", "description", "length", "index_status", "created_at", "updated_at"],
+    "primary_key": "id",
+    "required_fields": ["id", "owner_id", "name", "description", "length", "index_status", "created_at", "updated_at"],
     "optional_fields": [],
-    "unique_fields": ["dataset_id", "name"],
+    "unique_fields": ["id", "name"],
     "foreign_keys": [
         {
             "field": "owner_id",
             "reference_table": "users",
-            "reference_field": "user_id"
+            "reference_field": "id"
         }
     ]
 }

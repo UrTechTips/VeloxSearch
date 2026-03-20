@@ -1,8 +1,7 @@
 schema = {
     "fields": [
-        "apikey_id",
+        "id",
         "owner_id",
-        "key_id",
         "hashed_key",
         "scopes",
         "rate_limit",
@@ -10,19 +9,18 @@ schema = {
         "created_at",
     ],
     "types": {
-        "apikey_id": "TEXT",
+        "id": "TEXT",
         "owner_id": "TEXT",
-        "key_id": "TEXT",
         "hashed_key": "TEXT",
         "scopes": "TEXT", # TODO: Change to JSON when switching database
         "rate_limit": "INTEGER",
         "expires_at": "TIMESTAMP",
         "created_at": "TIMESTAMP",
     },
-    "primary_key": "apikey_id",
-    "required_fields": ["apikey_id", "owner_id", "key_id", "hashed_key", "scopes", "rate_limit", "expires_at", "created_at"],
+    "primary_key": "id",
+    "required_fields": ["id", "owner_id", "hashed_key", "scopes", "rate_limit", "expires_at", "created_at"],
     "optional_fields": [],
-    "unique_fields": ["apikey_id", "key_id"],
+    "unique_fields": ["id"],
     "foreign_keys": [
         {
             "field": "owner_id",

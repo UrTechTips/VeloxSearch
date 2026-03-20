@@ -1,21 +1,21 @@
 schema = {
     "fields": [
-        "user_id",
+        "id",
         "name",
         "email",
         "created_at",
         "datasets_count"
     ],
     "types": {
-        "user_id": "TEXT",
+        "id": "TEXT",
         "name": "TEXT",
         "email": "TEXT",
         "created_at": "TIMESTAMP",
         "datasets_count": "INTEGER"
     },
-    "primary_key": "user_id",
-    "required_fields": ["user_id", "name", "email", "created_at", "datasets_count"],
+    "primary_key": "id",
+    "required_fields": ["id", "name", "email", "created_at", "datasets_count"],
     "optional_fields": [],
-    "unique_fields": ["user_id", "email"],
+    "unique_fields": ["id", "email"],
     "foreign_keys": []
 }
