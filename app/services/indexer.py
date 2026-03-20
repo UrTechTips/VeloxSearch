@@ -43,12 +43,11 @@ class Indexer:
         Raises:
             ValueError: If the document does not contain an 'id' field.
         """
-        self.dataset.add_document(document)
-        self.inverted_index.add_document(document)
         document_id = document.get("id")
         if document_id is None:
             raise ValueError("Document must contain an 'id' field")
-        
+        self.dataset.add_document(document)
+        self.inverted_index.add_document(document)
         self.vector_search.add_document(document_id, document)
 
     def rebuild_index(self) -> None:
@@ -76,6 +75,12 @@ class Indexer:
         
         self.inverted_index.open_index()
         self.vector_search.load_index()
+
+    def save_index(self) -> None:
+        """Save the index for the dataset.
+        """
+        self.inverted_index.save_index()
+        self.vector_search.save_index()
 
     def get_inverted_index(self) -> InvertedIndex:
         """Get the inverted index.
