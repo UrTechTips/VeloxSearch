@@ -6,8 +6,6 @@ from typing import Any, List, Optional
 from app.services.search_service import SearchService
 from app.utils.redis_utils import publish_status
 
-r = redis.Redis(host='localhost', port=6379, decode_responses=True)
-
 def index_dataset(dataset_id: str):
     """Placeholder function to simulate dataset indexing. Replace with actual indexing logic.
 
@@ -20,7 +18,7 @@ def index_dataset(dataset_id: str):
     publish_status(dataset_id=dataset_id, message="Starting indexing process...", progress=0)
     path = f"data/{dataset_id}"
     search = SearchService(dataset_id=dataset_id, path=path)
-    search.index(dataset=None) # Replace with actual dataset loading logic
+    search.index()
 
     if job:
         job.meta['progress'] = 100

@@ -1,11 +1,14 @@
+import logging
 from typing import List, Dict, Self
+from app.utils.redis_utils import publish_status
+
 from app.services.bm25 import BM25
 from app.services.ranker import Ranker
 from app.services.dataset import Dataset
+from app.services.indexer import Indexer
 from app.services.vector_search import VectorSearch
 from app.services.inverted_index import InvertedIndex
-from app.services.indexer import Indexer
-import logging
+
 
 Logger = logging.getLogger(__name__)
 
@@ -28,7 +31,7 @@ class SearchService:
         self.bm25 = None
         self.ranker = None
 
-    def index(self, dataset: List[Dict]) -> Self:
+    def index(self) -> Self:
         """Index the dataset using both BM25 and Vector Search.
 
         Args:
@@ -37,8 +40,9 @@ class SearchService:
         Returns:
             Self: The instance of the SearchService.
         """
-        self.dataset.save_dataset(dataset)
+        # self.dataset.save_dataset(dataset)
         self.indexer.build_index()
+        publish_status(dataset_id=self.dataset_id, message="Indexing completed.", progress=100)
 
         self.inverted_index = self.indexer.get_inverted_index()
         self.vector_search = self.indexer.get_vector_search()

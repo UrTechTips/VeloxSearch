@@ -27,6 +27,9 @@ class Dataset:
         self.config = config
 
         self.path = path if path is not None else f"data/{self.dataset_id}/"
+        # TODO: To make a better implementation, Instead of checking if the path exists, we can check if the a status flag exists in a database.
+        if os.path.exists(self.path):
+            self.load_dataset()
 
     def save_dataset(self, data: List[Dict]) -> Self:
         """Save the dataset to a JSON file.
