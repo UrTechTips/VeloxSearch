@@ -12,13 +12,17 @@ def index_dataset(dataset_id: str):
     Args:
         dataset_id (str): The ID of the dataset to be indexed.
     """
+    print("Index is called with dataset_id:", dataset_id) #TODO: Remove before production
     job = get_current_job()
-    channel = f"status:{dataset_id}"
     
     publish_status(dataset_id=dataset_id, message="Starting indexing process...", progress=0)
-    path = f"data/{dataset_id}"
-    search = SearchService(dataset_id=dataset_id, path=path)
-    search.index()
+    try:
+        path = f"data/{dataset_id}"
+        search = SearchService(dataset_id=dataset_id, path=path)
+        search.index()
+    except Exception as e:
+        publish_status(dataset_id=dataset_id, message=f"Indexing failed: {str(e)}", progress=0)
+        raise e
 
     if job:
         job.meta['progress'] = 100

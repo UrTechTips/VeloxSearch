@@ -63,3 +63,9 @@ class IndexQueue:
         """
         return len(self.queue)
     
+    def __del__(self):
+        try:
+            self.queue.empty()
+            self.redis_conn.close()
+        except Exception as e:
+            print(f"Error closing Redis connection: {e}")
