@@ -5,6 +5,7 @@ from typing import Dict, Self
 from app.services.dataset import Dataset
 from app.services.vector_search import VectorSearch
 from app.services.inverted_index import InvertedIndex
+from app.utils.redis_utils import publish_status
 
 class Indexer:
     def __init__(self, dataset: Dataset, path: str = None) -> None:
@@ -30,8 +31,11 @@ class Indexer:
         os.makedirs(self.path, exist_ok=True)
 
         dataset = self.dataset.get_documents()
+        publish_status(dataset_id=self.dataset_id, message="Building inverted index...", progress=0)
         self.inverted_index.build_index()
+        publish_status(dataset_id=self.dataset_id, message="Building vector index...", progress=50)
         self.vector_search.build_index()
+        
         return self
 
     def add_document(self, document: Dict) -> None:
