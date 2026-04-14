@@ -3,12 +3,13 @@ import uvicorn
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.core import REDIS_HOST, REDIS_PORT
-from .routers import index
+from .routers import indexRouter
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+
         print("Connected to Redis")
         app.state.redis_client = redis_client
         yield
@@ -22,7 +23,7 @@ app = FastAPI(lifespan=lifespan)
 def read_root():
     return {"Hello": "World"}
 
-app.include_router(index.router)
+app.include_router(indexRouter)
 
 if __name__ == "__main__":
     uvicorn.run("app.main", host="localhost", port=8000, reload=True)
