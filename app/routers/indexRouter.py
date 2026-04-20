@@ -19,6 +19,7 @@ def read_index():
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     redis = websocket.app.state.redis_client
+    redis_queue = websocket.app.state.index_queue
 
     data = await websocket.receive_text()
     data = json.loads(data)
@@ -26,7 +27,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
     pubsub = redis.pubsub()
     pubsub.subscribe(f"status:{data['id']}")
-    redis_queue = IndexQueue(index_dataset)
     redis_queue.offer(data['id'])
 
     while True:

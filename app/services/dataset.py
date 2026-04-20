@@ -48,6 +48,22 @@ class Dataset:
         with open(config_path, "w") as f:
             json.dump(self.config, f)
         return self
+
+    def save_config(self, config: Dict) -> Self:
+        """Save the dataset configuration to a JSON file.
+
+        Args:
+            config (Dict): The configuration to save.
+
+        Returns:
+            Dataset: The current Dataset instance.
+        """
+        self.config = config
+        os.makedirs(self.path, exist_ok=True)
+        config_path = os.path.join(self.path, "config.json")
+        with open(config_path, "w") as f:
+            json.dump(config, f)
+        return self
     
     def load_dataset(self) -> Self:
         """Load the dataset from a JSON file.
