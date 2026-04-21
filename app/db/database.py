@@ -3,6 +3,9 @@ from app.db.manager import DatabaseManager
 from app.schemas import user_schema, dataset_schema, apikey_schema, usage_schema, feedback_schema
 from app.utils.schema_utils import schema_to_insert_sql
 
+# TODO: Add update and delete functions as well, and consider moving to separate file if this gets too large
+# TODO: Modify all insert functions to validate kwargs or hardcode fields with respect to the schema
+
 class DatabaseService:
     def __init__(self, db_manager: DatabaseManager):
         self.db_manager = db_manager
@@ -113,15 +116,32 @@ class DatabaseService:
             cursor.execute("SELECT COUNT(*) FROM usage WHERE apikey_id = ? AND created_at >= datetime('now', 'start of day')", (apikey_id,))
             result = cursor.fetchone()
             return int(result[0]) if result and result[0] is not None else None
-
-    # INSERT FUNCTIONS BELOW - TODO: Add update and delete functions as well, and consider moving to separate file if this gets too large
         
-    def insert_dataset(self, dataset_id: str, owner_id: str, **kwargs) -> bool:
-        # TODO: Validate kwargs against dataset_schema before inserting either in this file or in utils/schema_utils.py
+    def get_dataset_id_from_apikey(self, api_hashed_key: str) -> Optional[str]:
+        """Get the dataset ID associated with a specific API key.
+
+        Args:
+            api_hashed_key (str): The hashed API key to check.
+
+        Returns:
+            Optional[str]: The dataset ID associated with the API key, or None if not found.
+        """
+        with self.db_manager as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM apikeys WHERE hashed_key = ?", (api_hashed_key,))
+            apikey = cursor.fetchone()
+            if not apikey:
+                return None
+            dataset_id = apikey[2]
+            return dataset_id
+
+        
+    def insert_dataset(self, dataset_id: str, owner_id: str, name: str, description: str = None, length: int = None, index_status: str = "None") -> bool:
         with self.db_manager as conn:
             cursor = conn.cursor()
             try:
-                cursor.execute(*schema_to_insert_sql("datasets", dataset_schema, id=dataset_id, owner_id=owner_id, **kwargs))
+                created_at = cursor.execute("SELECT datetime('now')").fetchone()[0]
+                cursor.execute(*schema_to_insert_sql("datasets", dataset_schema, id=dataset_id, owner_id=owner_id, name=name, description=description, length=length, index_status=index_status, created_at=created_at, updated_at=created_at))
                 conn.commit()
                 return True
             except Exception as e:
@@ -139,15 +159,27 @@ class DatabaseService:
                 print(f"Error inserting user: {e}")
                 return False
 
-    def insert_apikey(self, apikey_id: str, owner_id: str, **kwargs) -> bool:
+    def insert_apikey(self, apikey_id: str, owner_id: str, dataset_id: str, is_active: bool, hashed_key: str, rate_limit: int) -> bool:
         with self.db_manager as conn:
             cursor = conn.cursor()
             try:
-                cursor.execute(*schema_to_insert_sql("apikeys", apikey_schema, id=apikey_id, owner_id=owner_id, **kwargs))
+                created_at = cursor.execute("SELECT datetime('now')").fetchone()[0]
+                cursor.execute(*schema_to_insert_sql("apikeys", apikey_schema, id=apikey_id, owner_id=owner_id, dataset_id=dataset_id, is_active=is_active, hashed_key=hashed_key, rate_limit=rate_limit, created_at=created_at))
                 conn.commit()
                 return True
             except Exception as e:
                 print(f"Error inserting apikey: {e}")
+                return False
+
+    def deactivate_apikey(self, apikey_hash: str) -> bool:
+        with self.db_manager as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute("UPDATE apikeys SET is_active = FALSE WHERE hashed_key = ?", (apikey_hash,))
+                conn.commit()
+                return True
+            except Exception as e:
+                print(f"Error deactivating apikey: {e}")
                 return False
 
     def insert_usage(self, usage_id: str, apikey_hash: str, **kwargs) -> bool:

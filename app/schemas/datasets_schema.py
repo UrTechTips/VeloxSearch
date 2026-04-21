@@ -21,7 +21,7 @@ schema = {
     },
     "primary_key": "id",
     "required_fields": ["id", "owner_id", "name", "description", "length", "index_status", "created_at", "updated_at"],
-    "optional_fields": [],
+    "optional_fields": ["description"],
     "unique_fields": ["id", "name"],
     "foreign_keys": [
         {

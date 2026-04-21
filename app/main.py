@@ -1,7 +1,7 @@
 import redis
 import uvicorn
 from fastapi import FastAPI
-from .routers import indexRouter, datasetRouter
+from .routers import indexRouter, datasetRouter, apikeyRouter, searchRouter
 from contextlib import asynccontextmanager
 from app.core import REDIS_HOST, REDIS_PORT
 from app.services.redisQueue import IndexQueue
@@ -43,6 +43,8 @@ def read_root():
 
 app.include_router(indexRouter)
 app.include_router(datasetRouter)
+app.include_router(apikeyRouter)
+app.include_router(searchRouter)
 
 if __name__ == "__main__":
     uvicorn.run("app.main", host="localhost", port=8000, reload=True)

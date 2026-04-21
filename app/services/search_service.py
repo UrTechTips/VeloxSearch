@@ -31,6 +31,14 @@ class SearchService:
         self.bm25 = None
         self.ranker = None
 
+    def is_indexed(self) -> bool:
+        """Check if the dataset has already been indexed.
+
+        Returns:
+            bool: True if indexed, False otherwise.
+        """
+        return self.indexer.is_indexed()
+
     def index(self) -> Self:
         """Index the dataset using both BM25 and Vector Search.
 

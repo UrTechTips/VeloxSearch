@@ -31,6 +31,16 @@ class VectorSearch:
         self.reverse_id_map: Dict[int, str] = {}
         self.next_internal_id: int = 1
 
+    def index_exists(self) -> bool:
+        """Check if the index files exist on disk.
+
+        Returns:
+            bool: True if index files exist, False otherwise.
+        """
+        path_index = os.path.join(self.path, "vector_index.bin")
+        path_idmap = os.path.join(self.path, "id_map.json")
+        return os.path.exists(path_index) and os.path.exists(path_idmap)
+
     def build_index(self, batch_size: Optional[int] = 32) -> hnswlib.Index:
         """Build HNSWLib index from dataset. And save the index.
 
