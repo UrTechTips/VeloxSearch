@@ -6,6 +6,7 @@ schema = {
         "hashed_key",
         "scopes",
         "rate_limit",
+        "quota_limit",
         "is_active",
         "expires_at",
         "created_at",
@@ -18,11 +19,12 @@ schema = {
         "scopes": "TEXT", # TODO: Change to JSON when switching database
         "is_active": "BOOLEAN",
         "rate_limit": "INTEGER",
+        "quota_limit": "INTEGER",
         "expires_at": "TIMESTAMP",
         "created_at": "TIMESTAMP",
     },
     "primary_key": "id",
-    "required_fields": ["id", "owner_id", "dataset_id", "hashed_key", "rate_limit", "is_active", "created_at"],
+    "required_fields": ["id", "owner_id", "dataset_id", "hashed_key", "rate_limit", "quota_limit", "is_active", "created_at"],
     "optional_fields": ["scopes", "expires_at"],
     "unique_fields": ["id"],
     "foreign_keys": [

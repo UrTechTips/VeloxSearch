@@ -57,11 +57,11 @@ class DatabaseService:
             results = cursor.fetchall()
             return {"datasets": [dict(row) for row in results]}
 
-    def validate_apikey(self, user_id: str, api_hashed_key: str) -> bool:
+    def validate_apikey(self, api_hashed_key: str) -> bool:
+        # TODO: Do i need to add user_id to check as security??
         """Validates an API key for a specific user.
 
         Args:
-            user_id (str): The ID of the user.
             api_hashed_key (str): The hashed API key to validate.
 
         Returns:
@@ -69,7 +69,7 @@ class DatabaseService:
         """
         with self.db_manager as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM apikeys WHERE hashed_key = ? AND owner_id = ?", (api_hashed_key, user_id))
+            cursor.execute("SELECT * FROM apikeys WHERE hashed_key = ?", (api_hashed_key,))
             result = cursor.fetchone()
             return bool(result)
 
@@ -159,12 +159,12 @@ class DatabaseService:
                 print(f"Error inserting user: {e}")
                 return False
 
-    def insert_apikey(self, apikey_id: str, owner_id: str, dataset_id: str, is_active: bool, hashed_key: str, rate_limit: int) -> bool:
+    def insert_apikey(self, apikey_id: str, owner_id: str, dataset_id: str, is_active: bool, hashed_key: str, rate_limit: int, quota_limit: int) -> bool:
         with self.db_manager as conn:
             cursor = conn.cursor()
             try:
                 created_at = cursor.execute("SELECT datetime('now')").fetchone()[0]
-                cursor.execute(*schema_to_insert_sql("apikeys", apikey_schema, id=apikey_id, owner_id=owner_id, dataset_id=dataset_id, is_active=is_active, hashed_key=hashed_key, rate_limit=rate_limit, created_at=created_at))
+                cursor.execute(*schema_to_insert_sql("apikeys", apikey_schema, id=apikey_id, owner_id=owner_id, dataset_id=dataset_id, is_active=is_active, hashed_key=hashed_key, rate_limit=rate_limit, quota_limit=quota_limit, created_at=created_at))
                 conn.commit()
                 return True
             except Exception as e:
@@ -181,17 +181,17 @@ class DatabaseService:
             except Exception as e:
                 print(f"Error deactivating apikey: {e}")
                 return False
-
-    def insert_usage(self, usage_id: str, apikey_hash: str, **kwargs) -> bool:
+    def insert_usage(self, usage_id: str, apikey_hash: str, endpoint: str, latency: float, query_hash: str) -> bool:
         with self.db_manager as conn:
             cursor = conn.cursor()
             try:
+                created_at = cursor.execute("SELECT datetime('now')").fetchone()[0]
                 apikey_id = cursor.execute("SELECT id FROM apikeys WHERE hashed_key = ?", (apikey_hash,)).fetchone()
                 if not apikey_id:
                     print(f"Error inserting usage: No apikey found for hash {apikey_hash}")
                     return False
                 apikey_id = apikey_id[0]
-                cursor.execute(*schema_to_insert_sql("usage", usage_schema, id=usage_id, apikey_id=apikey_id, **kwargs))
+                cursor.execute(*schema_to_insert_sql("usage", usage_schema, id=usage_id, apikey_id=apikey_id, endpoint=endpoint, latency=latency, query_hash=query_hash, created_at=created_at))
                 conn.commit()
                 return True
             except Exception as e:

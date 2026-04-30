@@ -20,3 +20,5 @@ data/*
 *.db
 
 script.sh
+
+test_api_key.txt

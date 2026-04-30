@@ -1,6 +1,6 @@
 import redis
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from .routers import indexRouter, datasetRouter, apikeyRouter, searchRouter
 from contextlib import asynccontextmanager
 from app.core import REDIS_HOST, REDIS_PORT
@@ -27,7 +27,6 @@ origins = [
     "http://localhost:*",
 ]
 
-# TODO: Restrict origins in production.
 app.add_middleware(
     CORSMiddleware,
     allow_origins = origins,
