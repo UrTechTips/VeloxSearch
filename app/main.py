@@ -5,12 +5,14 @@ from .routers import indexRouter, datasetRouter, apikeyRouter, searchRouter
 from contextlib import asynccontextmanager
 from app.core import REDIS_HOST, REDIS_PORT
 from app.services.redisQueue import IndexQueue
+from app.services.vector_search import VectorSearch
 from app.utils.indexQueue import index_dataset
 from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
+        VectorSearch.preload_model()
         redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
         index_queue = IndexQueue(index_dataset, "index_queue")
         print("Connected to Redis")

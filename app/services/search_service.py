@@ -1,4 +1,3 @@
-import logging
 from typing import List, Dict, Self
 from app.utils.redis_utils import publish_status
 
@@ -9,8 +8,6 @@ from app.services.indexer import Indexer
 from app.services.vector_search import VectorSearch
 from app.services.inverted_index import InvertedIndex
 
-
-Logger = logging.getLogger(__name__)
 
 class SearchService:
     def __init__(self, dataset_id: str, path: str = None) -> None:
@@ -111,4 +108,4 @@ class SearchService:
             data = self.dataset.get_document(doc_id)
             res.append(data)
 
-        return {"results": res, "meta": results}        
+        return {"results": res, "meta": results}

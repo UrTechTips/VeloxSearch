@@ -1,7 +1,8 @@
 import jwt
+import time
 from fastapi import Header, HTTPException, Request
 from app.core import JWT_SECRET, JWT_ALGORITHM
-from app.utils.api_utils import validate_key, get_dataset_id_from_apikey
+from app.utils.api_utils import validate_key, get_dataset_id_from_apikey, get_dataset_id_from_apikey_hash
 from app.utils.rate_limiter import is_rate_limited, is_quota_exceeded
 
 def get_current_user(authorization: str = Header(...)):
@@ -46,7 +47,6 @@ def get_apikey(authorization: str = Header(...), request: Request = None):
     Returns:
         str: The API key extracted from the Authorization header.
     """
-    print(request.app.state)
     redis_client = request.app.state.redis_client
     if not authorization.startswith("Bearer "):
         raise HTTPException(401, "Invalid API key")
@@ -60,4 +60,4 @@ def get_apikey(authorization: str = Header(...), request: Request = None):
         raise HTTPException(401, "Invalid API key")
     if not apikey:
         raise HTTPException(401, "API key missing")
-    return apikey
+    return apikey, get_dataset_id_from_apikey(apikey)

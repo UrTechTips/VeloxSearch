@@ -2,13 +2,16 @@ import time
 import json
 import asyncio
 import traceback
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, Depends, WebSocket
 from app.services.redisQueue import IndexQueue
 from app.utils.indexQueue import index_dataset
+from app.utils.dependencies_utils import get_current_user
+from app.db import service as database_service
 
 router = APIRouter(
     prefix="/index",
-    tags=["index"]
+    tags=["index"],
+    dependencies=[Depends(get_current_user)]
 )
 
 @router.get("/")
@@ -16,7 +19,7 @@ def read_index():
     return {"message": "Welcome to the index route!"}
 
 @router.websocket("/")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, user_id: str = Depends(get_current_user)):
     await websocket.accept()
     redis = websocket.app.state.redis_client
     redis_queue = websocket.app.state.index_queue
@@ -24,10 +27,24 @@ async def websocket_endpoint(websocket: WebSocket):
     data = await websocket.receive_text()
     data = json.loads(data)
     print(f"Received message: {data['message']}")
+    dataset_id = data.get("id")
+    
+    try:
+        # Will be True if no errors but I dont care about the result here, just want to validate permissions
+        database_service.validate_dataset_id(dataset_id, user_id)
+    except Exception as e:
+        await websocket.send_text(json.dumps({"message": f"Error validating dataset ID: {e}"}))
+        await websocket.close()
+        return
+
+    if dataset_id is None or dataset_id == "":
+        await websocket.send_text(json.dumps({"message": "Invalid dataset ID!"}))
+        await websocket.close()
+        return
 
     pubsub = redis.pubsub()
-    pubsub.subscribe(f"status:{data['id']}")
-    redis_queue.offer(data['id'])
+    pubsub.subscribe(f"status:{dataset_id}")
+    redis_queue.offer(dataset_id)
 
     while True:
         try:

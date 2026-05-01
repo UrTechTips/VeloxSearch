@@ -25,6 +25,7 @@ def schema_to_create_table_sql(table_name: str, schema: Dict) -> str:
 
         if field == primary_key:
             parts.append("PRIMARY KEY")
+            parts.append("AUTOINCREMENT")
 
         if field in required:
             parts.append("NOT NULL")
