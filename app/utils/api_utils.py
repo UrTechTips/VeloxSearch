@@ -1,20 +1,10 @@
 import uuid
-from hashlib import sha256
 from app.db.database import DatabaseService
 from app.db.manager import DatabaseManager
 from app.core.database_config import DATABASE_NAME
-from app.core.apikey_config import API_KEY_SECRET, RATE_LIMIT, QUOTA_LIMIT
+from app.core.apikey_config import RATE_LIMIT, QUOTA_LIMIT
 
-def apihash(api_key: str) -> str:
-    """Generates a hash for the given API key.
-
-    Args:
-        api_key (str): The API key to hash.
-    
-    Returns:
-        str: The SHA-256 hash of the API key combined with the secret.
-    """
-    return sha256((api_key + API_KEY_SECRET).encode()).hexdigest()
+from app.utils.hash_utils import apihash
 
 def generate_key(owner_id: str, dataset_id: str) -> str:
     """Generates an API key for a given owner and secret.
@@ -26,13 +16,11 @@ def generate_key(owner_id: str, dataset_id: str) -> str:
     Returns:
         str: The generated API key.
     """
-    apikey_id = uuid.uuid4().hex
     api_key = uuid.uuid4().hex
-    hash = sha256((api_key + API_KEY_SECRET).encode()).hexdigest()
+    hash = apihash(api_key)
 
     db = DatabaseService(DatabaseManager(DATABASE_NAME))
-    db.insert_apikey(apikey_id, owner_id, dataset_id, True, hash, RATE_LIMIT, QUOTA_LIMIT)
-    print("Generated API key:", api_key)  # Debugging statement
+    db.insert_apikey(owner_id, dataset_id, True, hash, RATE_LIMIT, QUOTA_LIMIT)
     return api_key
 
 def validate_key(api_key: str) -> bool:
@@ -44,7 +32,7 @@ def validate_key(api_key: str) -> bool:
     Returns:
         bool: True if the API key is valid, False otherwise.
     """
-    hash = sha256((api_key + API_KEY_SECRET).encode()).hexdigest()
+    hash = apihash(api_key)
 
     db = DatabaseService(DatabaseManager(DATABASE_NAME))
     return db.validate_apikey(hash)
@@ -73,7 +61,7 @@ def get_dataset_id_from_apikey(api_key: str) -> str:
     Returns:
         str: The dataset ID associated with the API key, or None if not found.
     """
-    hash = sha256((api_key + API_KEY_SECRET).encode()).hexdigest()
+    hash = apihash(api_key)
 
     db = DatabaseService(DatabaseManager(DATABASE_NAME))
     return db.get_dataset_id_from_apikey(hash)

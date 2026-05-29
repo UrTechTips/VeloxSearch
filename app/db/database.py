@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 from starlette.exceptions import HTTPException
 from app.db.manager import DatabaseManager
@@ -44,20 +44,20 @@ class DatabaseService:
             result = zip(user_schema['fields'], result) if result else None
             return {"metadata": dict(result)} if result else None
 
-    def list_datasets(self, user_id: str) -> Dict:
+    def list_datasets(self, user_id: str) -> List[Dict]:
         """List all datasets for a specific user.
 
         Args:
             user_id (str): The ID of the user.
 
         Returns:
-            Dict: A discription of the datasets owned by the user.
+            List[Dict]: A list of dictionaries describing the datasets owned by the user.
         """
         with self.db_manager as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM datasets WHERE owner_id = ?", (user_id,))
             results = cursor.fetchall()
-            return {"datasets": [dict(row) for row in results]}
+            return [dict(row) for row in results]
 
     def validate_apikey(self, api_hashed_key: str) -> bool:
         # TODO: Do i need to add user_id to check as security??
@@ -175,12 +175,13 @@ class DatabaseService:
             except Exception as e:
                 print(f"Error inserting dataset: {e}")
                 return False
-            
-    def insert_user(self, user_id: str, **kwargs) -> bool:
+
+    def insert_user(self, user_id: str, name: str, email: str) -> bool:
         with self.db_manager as conn:
             cursor = conn.cursor()
             try:
-                cursor.execute(*schema_to_insert_sql("users", user_schema, id=user_id, **kwargs))
+                created_at = cursor.execute("SELECT datetime('now')").fetchone()[0]
+                cursor.execute(*schema_to_insert_sql("users", user_schema, id=user_id, name=name, email=email, created_at=created_at, datasets_count=0))
                 conn.commit()
                 return True
             except Exception as e:
@@ -235,4 +236,17 @@ class DatabaseService:
                 return True
             except Exception as e:
                 print(f"Error inserting feedback: {e}")
+                return False
+    
+    # Deleting Function
+
+    def delete_database(self, dataset_id: str, owner_id: str) -> bool:
+        with self.db_manager as conn:
+            cursor = conn.cursor()
+            try:
+                cursor.execute("DELETE FROM datasets WHERE id = ? AND owner_id = ?", (dataset_id, owner_id))
+                conn.commit()
+                return True
+            except Exception as e:
+                print(f"Error deleting dataset: {e}")
                 return False

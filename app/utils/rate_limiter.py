@@ -71,4 +71,3 @@ def is_quota_exceeded(redis_client: redis.Redis, api_key: str, quota_limit: int 
     if current_count > quota_limit:
         return True
     return False
-

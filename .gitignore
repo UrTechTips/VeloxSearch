@@ -22,3 +22,5 @@ data/*
 script.sh
 
 test_api_key.txt
+
+firebaseCred.json

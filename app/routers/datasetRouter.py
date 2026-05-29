@@ -34,8 +34,16 @@ router = APIRouter(
 )
 
 @router.get("/")
-def read_dataset():
-    return {"message": "Welcome to the dataset route!"}
+def read_dataset_get():
+    return {"message": "Welcome to datasets route"}
+
+@router.get("/list")
+def read_dataset(user_id: str = Depends(get_current_user)):
+    try:
+        datasets = database_service.list_datasets(user_id)
+        return {"datasets": datasets, "success": True}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"message": f"Failed to list datasets! Error: {e}", "success": False})
 
 @router.post("/create")
 def create_dataset(request: DatasetCreateRequest, user_id: str = Depends(get_current_user)):

@@ -11,7 +11,7 @@ def setup_cleanup():
     # Cleanup after tests
     # Delete from sqlite 
     from app.db import service as database_service
-    database_service.delete_dataset("test_dataset_id")
+    database_service.delete_dataset("test_dataset_id", "test_user")
 
 def test_read_dataset(setup_cleanup):
     client = setup_cleanup
