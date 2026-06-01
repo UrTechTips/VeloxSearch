@@ -1,4 +1,5 @@
 import uuid
+import random
 from app.db.database import DatabaseService
 from app.db.manager import DatabaseManager
 from app.core.database_config import DATABASE_NAME
@@ -17,10 +18,14 @@ def generate_key(owner_id: str, dataset_id: str) -> str:
         str: The generated API key.
     """
     api_key = uuid.uuid4().hex
+    # Get random 10 character string for API key ID
+    random_hex = uuid.uuid4().hex
+    start_id = random.randint(0, len(random_hex) - 10)
+    apikey_id = random_hex[start_id:start_id + 10]
     hash = apihash(api_key)
 
     db = DatabaseService(DatabaseManager(DATABASE_NAME))
-    db.insert_apikey(owner_id, dataset_id, True, hash, RATE_LIMIT, QUOTA_LIMIT)
+    db.insert_apikey(apikey_id, owner_id, dataset_id, True, hash, RATE_LIMIT, QUOTA_LIMIT)
     return api_key
 
 def validate_key(api_key: str) -> bool:

@@ -27,6 +27,7 @@ schema = {
     "required_fields": ["id", "owner_id", "dataset_id", "hashed_key", "rate_limit", "quota_limit", "is_active", "created_at"],
     "optional_fields": ["scopes", "expires_at"],
     "unique_fields": ["id"],
+    "auto_increment": "",
     "foreign_keys": [
         {
             "field": "owner_id",

@@ -1,6 +1,7 @@
 import uuid
 import json
 from typing import Dict, List
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from jsonschema import validate
 from app.services.dataset import Dataset
@@ -37,11 +38,21 @@ router = APIRouter(
 def read_dataset_get():
     return {"message": "Welcome to datasets route"}
 
+@router.get("/get/{id}")
+def get_dataset_metadata(id: str, user_id: str = Depends(get_current_user)):
+    try:
+        if database_service.validate_dataset_id(id, user_id) is False:
+            raise HTTPException(status_code=403, detail={"message": "You do not have permission to access this dataset!"})
+        metadata = database_service.get_dataset_metadata(id)
+        return JSONResponse(content=json.dumps({"message": f"Metadata for dataset {id}!", "metadata": metadata, "success": True}), media_type="application/json", status_code=200)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"message": f"Failed to get dataset metadata! Error: {e}", "success": False})
+
 @router.get("/list")
-def read_dataset(user_id: str = Depends(get_current_user)):
+def list_datasets(user_id: str = Depends(get_current_user)):
     try:
         datasets = database_service.list_datasets(user_id)
-        return {"datasets": datasets, "success": True}
+        return JSONResponse(content=json.dumps({"datasets": datasets, "success": True}), media_type="application/json", status_code=200)
     except Exception as e:
         raise HTTPException(status_code=400, detail={"message": f"Failed to list datasets! Error: {e}", "success": False})
 
@@ -50,12 +61,15 @@ def create_dataset(request: DatasetCreateRequest, user_id: str = Depends(get_cur
     if request.description == "":
         request.description = "No description provided."
 
-    dataset_id = uuid.uuid5(uuid.NAMESPACE_X500, f"{user_id}_{request.database_name}").hex
-    result = database_service.insert_dataset(dataset_id, user_id, request.database_name, request.description)
+    name = request.database_name
+    id_hash = uuid.uuid5(uuid.NAMESPACE_X500, f"{user_id}_{request.database_name}").hex
+    random_string = id_hash[:8]
+    dataset_id = f"{name}-{random_string}"
+    result = database_service.insert_dataset(dataset_id, user_id, request.database_name, request.description, index_status="created")
     if (result):
-        return Response(content=json.dumps({"message": "Dataset created successfully!", "dataset_id": dataset_id}), media_type="application/json", status_code=200)
+        return JSONResponse(content=json.dumps({"message": "Dataset created successfully!", "dataset_id": dataset_id, "success": True}), media_type="application/json", status_code=200)
     else:
-        raise HTTPException(status_code=400, detail={"message": "Failed to create dataset!"})
+        raise HTTPException(status_code=400, detail={"message": "Failed to create dataset!", "success": False})
 
 @router.post("/upload")
 def upload_dataset(id: str = Form(...), file: UploadFile = File(), user_id: str = Depends(get_current_user)):
@@ -65,9 +79,10 @@ def upload_dataset(id: str = Form(...), file: UploadFile = File(), user_id: str 
         data = json.load(file.file)
         dataset = Dataset(id)
         dataset.save_dataset(data)
-        return Response(content=json.dumps({"message": "Dataset uploaded successfully!"}), media_type="application/json", status_code=200)
+        database_service.update_dataset(id, user_id, index_status="uploaded", length=len(data))
+        return JSONResponse(content=json.dumps({"message": "Dataset uploaded successfully!", "success": True}), media_type="application/json", status_code=200)
     except Exception as e:
-        raise HTTPException(status_code=400, detail={"message": f"Failed to upload dataset! Error: {e}"})
+        raise HTTPException(status_code=400, detail={"message": f"Failed to upload dataset! Error: {e}", "success": False})
 
 @router.post("/config")
 def upload_config(request: ConfigUploadRequest, user_id: str = Depends(get_current_user)):
@@ -78,12 +93,17 @@ def upload_config(request: ConfigUploadRequest, user_id: str = Depends(get_curre
         validate(data, config_schema)
         dataset = Dataset(request.id)
         dataset.save_config(data)
-        return Response(content=json.dumps({"message": "Config uploaded successfully!"}), media_type="application/json", status_code=200)
+        return JSONResponse(content=json.dumps({"message": "Config uploaded successfully!", "success": True}), media_type="application/json", status_code=200)
     except Exception as e:
-        raise HTTPException(status_code=400, detail={"message": f"Failed to upload config! Error: {e}"})
+        raise HTTPException(status_code=400, detail={"message": f"Failed to upload config! Error: {e}", "success": False})
 
 @router.get("/parse/{id}")
 def parse_dataset(id: str, user_id: str = Depends(get_current_user)):
-    if database_service.validate_dataset_id(id, user_id) is False:
-        raise HTTPException(status_code=403, detail={"message": "You do not have permission to parse this dataset!"})
-    return Response(content=json.dumps({"message": f"Parsing dataset {id}!"}), media_type="application/json", status_code=200)
+    try:
+        if database_service.validate_dataset_id(id, user_id) is False:
+            raise HTTPException(status_code=403, detail={"message": "You do not have permission to parse this dataset!"})
+        dataset = Dataset(id)
+        parsed_documents = dataset.parse_dataset()
+        return JSONResponse(content=json.dumps({"message": f"Parsing dataset {id}!", "schema": parsed_documents, "success": True}), media_type="application/json", status_code=200)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"message": f"Failed to parse dataset! Error: {e}", "success": False})

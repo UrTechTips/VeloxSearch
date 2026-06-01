@@ -17,5 +17,6 @@ schema = {
     "required_fields": ["id", "name", "email", "created_at", "datasets_count"],
     "optional_fields": [],
     "unique_fields": ["id", "email"],
+    "auto_increment": "",
     "foreign_keys": []
 }

@@ -1,6 +1,8 @@
+import json
 import time
 import uuid
 from fastapi import APIRouter, Request, Response, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from app.utils.api_utils import get_dataset_id_from_apikey
 from app.services.search_service import SearchService
 from app.db import service as database_service
@@ -15,24 +17,40 @@ router = APIRouter(
 )
 
 @router.get("/")
-def read_search(apikey: str = Depends(get_apikey)):
+def read_search():
     return {"message": "Welcome to the search route!"}
 
 @router.post("/query")
-def execute_search(query: str, dependency: Tuple[str, str] = Depends(get_apikey), query_hash: str = Depends(queryHash), request: Request = None):
-    redis_client = request.app.state.redis_client
-    if redis_client.exists(f"search:{dependency[1]}:{query_hash}"):
-        cached_result = redis_client.get(f"search:{dependency[1]}:{query_hash}")
-        return Response(content={"message": f"Search results for query: {query} (cached)!", "results": eval(cached_result)}, media_type="application/json", status_code=200)
+def execute_search(query: str, limit=10, sort=None, dependency: Tuple[str, str] = Depends(get_apikey), query_hash: str = Depends(queryHash), request: Request = None):
+    """Search for relevant information in the dataset based on the query and return the results.
 
+    Args:
+        query (str): The search query provided by the user.
+        limit (int, optional): The maximum number of results to return. Defaults to 10.
+        sort (_type_, optional): The sorting criteria for the search results. Defaults to None.
+        dependency (Tuple[str, str], optional): The API key and dataset ID tuple. Defaults to Depends(get_apikey).
+        query_hash (str, optional): The hash of the query for caching purposes. Defaults to Depends(queryHash).
+        request (Request, optional): The FastAPI request object. Defaults to None.
+
+    Raises:
+        HTTPException: If the dataset is not indexed yet, a 409 Conflict error is raised with a message indicating that the dataset is not ready for searching.
+
+    Returns:
+        JSONResponse: The search results wrapped in a JSONResponse object.
+    """
     apikey, dataset_id = dependency
+    redis_client = request.app.state.redis_client
+    if redis_client.exists(f"search:{dataset_id}:{query_hash}"):
+        cached_result = redis_client.get(f"search:{dataset_id}:{query_hash}")
+        return JSONResponse(content=json.dumps({"message": f"Search results for query: {query} (cached)!", "results": eval(cached_result), "success": True}), media_type="application/json", status_code=200)
+
     start_time = time.perf_counter()
     search = SearchService(dataset_id)
     
     if not search.is_indexed():
-        return {"message": "Dataset is not indexed yet. Please try again later.", "results": []}
-        # raise HTTPException(status_code=409, detail={"message": "Dataset is not indexed yet. Please try again later."})
-    result = search.search(query)
+        # return {"message": "Dataset is not indexed yet. Please try again later.", "results": []}
+        raise HTTPException(status_code=409, detail={"message": "Dataset is not indexed yet. Please try again later.", "success": False})
+    result = search.search(query, top_k=limit)
 
     end_time = time.perf_counter()
     latency = end_time - start_time
@@ -40,4 +58,4 @@ def execute_search(query: str, dependency: Tuple[str, str] = Depends(get_apikey)
 
     redis_client.setex(f"search:{dataset_id}:{query_hash}", 3600, str(result))
     
-    return Response(content={"message": f"Search results for query: {query}!", "results": result}, media_type="application/json", status_code=200)
+    return JSONResponse(content=json.dumps({"message": f"Search results for query: {query}!", "results": result, "success": True}), media_type="application/json", status_code=200)

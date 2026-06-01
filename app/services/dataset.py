@@ -1,6 +1,7 @@
 import os
 import json
 from typing import List, Dict, Optional, Self
+from genson import SchemaBuilder
 
 class Dataset:
     """A class to manage datasets, including loading, saving, and adding documents.
@@ -138,3 +139,17 @@ class Dataset:
             if doc.get("id") == document_id:
                 return doc
         return None
+    
+    def parse_dataset(self) -> List[Dict]:
+        """Parse the dataset to extract the schema and return the documents.
+
+        Returns:
+            List[Dict]: The list of parsed documents.
+        """
+        builder = SchemaBuilder()
+        documents = self.get_documents()
+        for doc in documents:
+            builder.add_object(doc)
+        schema = builder.to_json()
+        print(schema)
+        return schema

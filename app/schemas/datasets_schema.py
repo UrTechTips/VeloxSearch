@@ -23,6 +23,7 @@ schema = {
     "required_fields": ["id", "owner_id", "name", "description", "length", "index_status", "created_at", "updated_at"],
     "optional_fields": ["description"],
     "unique_fields": ["id", "name"],
+    "auto_increment": "",
     "foreign_keys": [
         {
             "field": "owner_id",

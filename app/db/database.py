@@ -3,7 +3,7 @@ from typing import Optional, Dict, List
 from starlette.exceptions import HTTPException
 from app.db.manager import DatabaseManager
 from app.schemas import user_schema, dataset_schema, apikey_schema, usage_schema, feedback_schema
-from app.utils.schema_utils import schema_to_insert_sql
+from app.utils.schema_utils import schema_to_insert_sql, schema_to_update_sql
 
 # TODO: Add update and delete functions as well, and consider moving to separate file if this gets too large
 # TODO: Modify all insert functions to validate kwargs or hardcode fields with respect to the schema
@@ -188,12 +188,12 @@ class DatabaseService:
                 print(f"Error inserting user: {e}")
                 return False
 
-    def insert_apikey(self, owner_id: str, dataset_id: str, is_active: bool, hashed_key: str, rate_limit: int, quota_limit: int) -> bool:
+    def insert_apikey(self, apikey_id: str, owner_id: str, dataset_id: str, is_active: bool, hashed_key: str, rate_limit: int, quota_limit: int) -> bool:
         with self.db_manager as conn:
             cursor = conn.cursor()
             try:
                 created_at = cursor.execute("SELECT datetime('now')").fetchone()[0]
-                cursor.execute(*schema_to_insert_sql("apikeys", apikey_schema, owner_id=owner_id, dataset_id=dataset_id, is_active=is_active, hashed_key=hashed_key, rate_limit=rate_limit, quota_limit=quota_limit, created_at=created_at))
+                cursor.execute(*schema_to_insert_sql("apikeys", apikey_schema, id=apikey_id, owner_id=owner_id, dataset_id=dataset_id, is_active=is_active, hashed_key=hashed_key, rate_limit=rate_limit, quota_limit=quota_limit, created_at=created_at))
                 conn.commit()
                 return True
             except Exception as e:
@@ -237,7 +237,20 @@ class DatabaseService:
             except Exception as e:
                 print(f"Error inserting feedback: {e}")
                 return False
-    
+
+    # Update Functions
+    def update_dataset(self, dataset_id: str, owner_id: str, **kwargs) -> bool:
+        with self.db_manager as conn:
+            cursor = conn.cursor()
+            try:
+                current_time = cursor.execute("SELECT datetime('now')").fetchone()[0]
+                cursor.execute(*schema_to_update_sql("datasets", dataset_schema, "id = ? AND owner_id = ?", (dataset_id, owner_id), updated_at=current_time, **kwargs))
+                conn.commit()
+                return True
+            except Exception as e:
+                print(f"Error updating dataset: {e}")
+                return False
+
     # Deleting Function
 
     def delete_database(self, dataset_id: str, owner_id: str) -> bool:
