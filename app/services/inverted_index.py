@@ -22,7 +22,7 @@ class InvertedIndex:
         """Generate Inverted Index for the given dataset."""
         self.dataset = dataset
         self.dataset_id = dataset.dataset_id
-        self.path = path if path is not None else f"data/{self.dataset_id}/inverted/"
+        self.path = path if path is not None else f"data/{self.dataset_id}/"
         self.index: Dict[str, Dict[str, int]] = {}
         self.doc_lengths: Dict[int, int] = {}
         self.total_docs: int = 0

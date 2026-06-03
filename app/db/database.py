@@ -59,6 +59,22 @@ class DatabaseService:
             results = cursor.fetchall()
             return [dict(row) for row in results]
 
+    def list_apikeys(self, dataset_id: str, owner_id: str) -> List[Dict]:
+        """List all API keys for a specific dataset and owner.
+
+        Args:
+            dataset_id (str): The ID of the dataset.
+            owner_id (str): The ID of the owner.
+
+        Returns:
+            List[Dict]: A list of dictionaries describing the API keys for the dataset and owner.
+        """
+        with self.db_manager as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM apikeys WHERE dataset_id = ? AND owner_id = ?", (dataset_id, owner_id))
+            results = cursor.fetchall()
+            return [dict(row) for row in results]
+
     def validate_apikey(self, api_hashed_key: str) -> bool:
         # TODO: Do i need to add user_id to check as security??
         """Validates an API key for a specific user.
@@ -188,12 +204,12 @@ class DatabaseService:
                 print(f"Error inserting user: {e}")
                 return False
 
-    def insert_apikey(self, apikey_id: str, owner_id: str, dataset_id: str, is_active: bool, hashed_key: str, rate_limit: int, quota_limit: int) -> bool:
+    def insert_apikey(self, apikey_id: str, owner_id: str, dataset_id: str, name: str, is_active: bool, hashed_key: str, encrypted_key: str, rate_limit: int, quota_limit: int) -> bool:
         with self.db_manager as conn:
             cursor = conn.cursor()
             try:
                 created_at = cursor.execute("SELECT datetime('now')").fetchone()[0]
-                cursor.execute(*schema_to_insert_sql("apikeys", apikey_schema, id=apikey_id, owner_id=owner_id, dataset_id=dataset_id, is_active=is_active, hashed_key=hashed_key, rate_limit=rate_limit, quota_limit=quota_limit, created_at=created_at))
+                cursor.execute(*schema_to_insert_sql("apikeys", apikey_schema, id=apikey_id, owner_id=owner_id, name=name, dataset_id=dataset_id, is_active=is_active, hashed_key=hashed_key, encrypted_key=encrypted_key, rate_limit=rate_limit, quota_limit=quota_limit, created_at=created_at))
                 conn.commit()
                 return True
             except Exception as e:

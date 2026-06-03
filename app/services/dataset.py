@@ -136,7 +136,7 @@ class Dataset:
         """
         documents = self.get_documents()
         for doc in documents:
-            if doc.get("id") == document_id:
+            if str(doc.get(self.config.get("id_field"))) == str(document_id):
                 return doc
         return None
     

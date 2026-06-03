@@ -44,7 +44,7 @@ def get_dataset_metadata(id: str, user_id: str = Depends(get_current_user)):
         if database_service.validate_dataset_id(id, user_id) is False:
             raise HTTPException(status_code=403, detail={"message": "You do not have permission to access this dataset!"})
         metadata = database_service.get_dataset_metadata(id)
-        return JSONResponse(content=json.dumps({"message": f"Metadata for dataset {id}!", "metadata": metadata, "success": True}), media_type="application/json", status_code=200)
+        return JSONResponse(content={"message": f"Metadata for dataset {id}!", "metadata": metadata, "success": True}, media_type="application/json", status_code=200)
     except Exception as e:
         raise HTTPException(status_code=400, detail={"message": f"Failed to get dataset metadata! Error: {e}", "success": False})
 
@@ -52,7 +52,7 @@ def get_dataset_metadata(id: str, user_id: str = Depends(get_current_user)):
 def list_datasets(user_id: str = Depends(get_current_user)):
     try:
         datasets = database_service.list_datasets(user_id)
-        return JSONResponse(content=json.dumps({"datasets": datasets, "success": True}), media_type="application/json", status_code=200)
+        return JSONResponse(content={"datasets": datasets, "success": True}, media_type="application/json", status_code=200)
     except Exception as e:
         raise HTTPException(status_code=400, detail={"message": f"Failed to list datasets! Error: {e}", "success": False})
 
@@ -67,7 +67,7 @@ def create_dataset(request: DatasetCreateRequest, user_id: str = Depends(get_cur
     dataset_id = f"{name}-{random_string}"
     result = database_service.insert_dataset(dataset_id, user_id, request.database_name, request.description, index_status="created")
     if (result):
-        return JSONResponse(content=json.dumps({"message": "Dataset created successfully!", "dataset_id": dataset_id, "success": True}), media_type="application/json", status_code=200)
+        return JSONResponse(content={"message": "Dataset created successfully!", "dataset_id": dataset_id, "success": True}, media_type="application/json", status_code=200)
     else:
         raise HTTPException(status_code=400, detail={"message": "Failed to create dataset!", "success": False})
 
@@ -80,7 +80,7 @@ def upload_dataset(id: str = Form(...), file: UploadFile = File(), user_id: str 
         dataset = Dataset(id)
         dataset.save_dataset(data)
         database_service.update_dataset(id, user_id, index_status="uploaded", length=len(data))
-        return JSONResponse(content=json.dumps({"message": "Dataset uploaded successfully!", "success": True}), media_type="application/json", status_code=200)
+        return JSONResponse(content={"message": "Dataset uploaded successfully!", "success": True}, media_type="application/json", status_code=200)
     except Exception as e:
         raise HTTPException(status_code=400, detail={"message": f"Failed to upload dataset! Error: {e}", "success": False})
 
@@ -93,7 +93,7 @@ def upload_config(request: ConfigUploadRequest, user_id: str = Depends(get_curre
         validate(data, config_schema)
         dataset = Dataset(request.id)
         dataset.save_config(data)
-        return JSONResponse(content=json.dumps({"message": "Config uploaded successfully!", "success": True}), media_type="application/json", status_code=200)
+        return JSONResponse(content={"message": "Config uploaded successfully!", "success": True}, media_type="application/json", status_code=200)
     except Exception as e:
         raise HTTPException(status_code=400, detail={"message": f"Failed to upload config! Error: {e}", "success": False})
 
@@ -104,6 +104,6 @@ def parse_dataset(id: str, user_id: str = Depends(get_current_user)):
             raise HTTPException(status_code=403, detail={"message": "You do not have permission to parse this dataset!"})
         dataset = Dataset(id)
         parsed_documents = dataset.parse_dataset()
-        return JSONResponse(content=json.dumps({"message": f"Parsing dataset {id}!", "schema": parsed_documents, "success": True}), media_type="application/json", status_code=200)
+        return JSONResponse(content={"message": f"Parsing dataset {id}!", "schema": parsed_documents, "success": True}, media_type="application/json", status_code=200)
     except Exception as e:
         raise HTTPException(status_code=400, detail={"message": f"Failed to parse dataset! Error: {e}", "success": False})

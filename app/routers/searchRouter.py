@@ -42,7 +42,7 @@ def execute_search(query: str, limit=10, sort=None, dependency: Tuple[str, str] 
     redis_client = request.app.state.redis_client
     if redis_client.exists(f"search:{dataset_id}:{query_hash}"):
         cached_result = redis_client.get(f"search:{dataset_id}:{query_hash}")
-        return JSONResponse(content=json.dumps({"message": f"Search results for query: {query} (cached)!", "results": eval(cached_result), "success": True}), media_type="application/json", status_code=200)
+        return JSONResponse(content={"message": f"Search results for query: {query} (cached)!", "results": eval(cached_result), "success": True}, media_type="application/json", status_code=200)
 
     start_time = time.perf_counter()
     search = SearchService(dataset_id)
@@ -50,7 +50,8 @@ def execute_search(query: str, limit=10, sort=None, dependency: Tuple[str, str] 
     if not search.is_indexed():
         # return {"message": "Dataset is not indexed yet. Please try again later.", "results": []}
         raise HTTPException(status_code=409, detail={"message": "Dataset is not indexed yet. Please try again later.", "success": False})
-    result = search.search(query, top_k=limit)
+    search = search.load()
+    result = search.search(query, top_k=int(limit))
 
     end_time = time.perf_counter()
     latency = end_time - start_time
@@ -58,4 +59,4 @@ def execute_search(query: str, limit=10, sort=None, dependency: Tuple[str, str] 
 
     redis_client.setex(f"search:{dataset_id}:{query_hash}", 3600, str(result))
     
-    return JSONResponse(content=json.dumps({"message": f"Search results for query: {query}!", "results": result, "success": True}), media_type="application/json", status_code=200)
+    return JSONResponse(content={"message": f"Search results for query: {query}!", "results": result, "success": True}, media_type="application/json", status_code=200)

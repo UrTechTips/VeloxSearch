@@ -70,7 +70,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str | None = None):
             redis_message = pubsub.get_message(ignore_subscribe_messages=True)
             if redis_message and redis_message['type'] == 'message':
                 msg_payload = redis_message['data'].decode('utf-8')
-                await websocket.send_text(json.dumps({"message": msg_payload}))
+                await websocket.send_text(msg_payload)
 
                 if json.loads(msg_payload).get("progress") == 100:
                     await websocket.send_text(json.dumps({"message": "Indexing complete!"}))

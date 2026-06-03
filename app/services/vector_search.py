@@ -24,7 +24,7 @@ class VectorSearch:
         self.dataset_id: str = dataset.dataset_id
         self.dataset = dataset
         self.vector_terms: List[str] = vector_terms if vector_terms is not None else []
-        self.path = path if path is not None else f"data/{self.dataset_id}/vector/"
+        self.path = path if path is not None else f"data/{self.dataset_id}/"
 
         start_time = time.perf_counter()
         self.model = self._get_or_create_model()
