@@ -17,6 +17,9 @@ class ConfigUploadRequest(BaseModel):
     id: str
     config: str # JSON STRING
 
+class DatasetDeleteRequest(BaseModel):
+    id: str
+
 config_schema = {
     "type": "object",
     "properties": {
@@ -43,7 +46,11 @@ def get_dataset_metadata(id: str, user_id: str = Depends(get_current_user)):
     try:
         if database_service.validate_dataset_id(id, user_id) is False:
             raise HTTPException(status_code=403, detail={"message": "You do not have permission to access this dataset!"})
-        metadata = database_service.get_dataset_metadata(id)
+        metadata = database_service.get_dataset_metadata(id)['metadata']
+        usage_quota = database_service.get_dataset_usagequota(id)
+        usage_rate = database_service.get_dataset_useagerate(id)
+        metadata["usage_quota"] = usage_quota
+        metadata["usage_rate"] = usage_rate
         return JSONResponse(content={"message": f"Metadata for dataset {id}!", "metadata": metadata, "success": True}, media_type="application/json", status_code=200)
     except Exception as e:
         raise HTTPException(status_code=400, detail={"message": f"Failed to get dataset metadata! Error: {e}", "success": False})
@@ -88,7 +95,7 @@ def upload_dataset(id: str = Form(...), file: UploadFile = File(), user_id: str 
 def upload_config(request: ConfigUploadRequest, user_id: str = Depends(get_current_user)):
     try:
         if database_service.validate_dataset_id(request.id, user_id) is False:
-            raise HTTPException(status_code=403, detail={"message": "You do not have permission to upload config for this dataset!"})
+            raise HTTPException(status_code=403, detail={"message": "You do not have permission to upload config for this dataset!", "success": False})
         data = json.loads(request.config)
         validate(data, config_schema)
         dataset = Dataset(request.id)
@@ -107,3 +114,18 @@ def parse_dataset(id: str, user_id: str = Depends(get_current_user)):
         return JSONResponse(content={"message": f"Parsing dataset {id}!", "schema": parsed_documents, "success": True}, media_type="application/json", status_code=200)
     except Exception as e:
         raise HTTPException(status_code=400, detail={"message": f"Failed to parse dataset! Error: {e}", "success": False})
+
+@router.post("/delete/{id}")
+def delete_dataset(request: DatasetDeleteRequest, user_id: str = Depends(get_current_user)):
+    try:
+        id = request.id
+        if not id:
+            raise HTTPException(status_code=400, detail={"message": "Dataset ID is required!", "success": False})
+        if database_service.validate_dataset_id(id, user_id) is False:
+            raise HTTPException(status_code=403, detail={"message": "You do not have permission to delete this dataset!", "success": False})
+        dataset = Dataset(id)
+        dataset.delete_dataset()
+        database_service.delete_dataset(id, user_id)
+        return JSONResponse(content={"message": f"Deleted dataset {id}!", "success": True}, media_type="application/json", status_code=200)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"message": f"Failed to delete dataset! Error: {e}", "success": False})

@@ -24,8 +24,8 @@ def queryHash(request: Request = None):
         str: The SHA-256 hash of the query.
     """
     requires_hash = request.headers.get("X-Require-Hash", "false").lower() == "true"
-    if requires_hash:
-        query = request.query_params.get("query", "")
-        query_hash = xxh64(query.encode()).hexdigest()
-        return query_hash
-    return None
+    # if requires_hash:
+    query = request.query_params.get("query", "")
+    query_hash = xxh64(query.encode()).hexdigest()
+    return query_hash
+    # return None

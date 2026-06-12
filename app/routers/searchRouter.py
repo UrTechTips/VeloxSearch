@@ -40,8 +40,13 @@ def execute_search(query: str, limit=10, sort=None, dependency: Tuple[str, str] 
     """
     apikey, dataset_id = dependency
     redis_client = request.app.state.redis_client
+    print(f"Received search query: {query} for dataset_id: {dataset_id} with query_hash: {query_hash}")
     if redis_client.exists(f"search:{dataset_id}:{query_hash}"):
+        start_time = time.perf_counter()
         cached_result = redis_client.get(f"search:{dataset_id}:{query_hash}")
+        end_time = time.perf_counter()
+        latency = end_time - start_time
+        database_service.insert_usage(apihash(apikey), "/search/query", latency, query_hash=uuid.uuid5(uuid.NAMESPACE_X500, query).hex)
         return JSONResponse(content={"message": f"Search results for query: {query} (cached)!", "results": eval(cached_result), "success": True}, media_type="application/json", status_code=200)
 
     start_time = time.perf_counter()

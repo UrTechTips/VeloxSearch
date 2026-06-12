@@ -153,3 +153,13 @@ class Dataset:
         schema = builder.to_json()
         print(schema)
         return schema
+
+    def delete_dataset(self) -> None:
+        """Delete the dataset by removing the dataset directory and its contents."""
+        if os.path.exists(self.path):
+            for root, dirs, files in os.walk(self.path, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
+            os.rmdir(self.path)
