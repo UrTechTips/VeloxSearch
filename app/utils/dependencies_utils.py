@@ -1,6 +1,7 @@
 import jwt
 import time
 from fastapi import Header, HTTPException, Request
+from app.core.apikey_config import RATE_LIMIT, QUOTA_LIMIT
 from app.core import JWT_SECRET, JWT_ALGORITHM
 from app.utils.api_utils import validate_key, get_dataset_id_from_apikey, get_dataset_id_from_apikey_hash
 from app.utils.rate_limiter import is_rate_limited, is_quota_exceeded
@@ -51,10 +52,12 @@ def get_apikey(authorization: str = Header(...), request: Request = None):
         raise HTTPException(401, "Invalid API key")
     
     apikey = authorization.split(" ")[1]
-    if is_rate_limited(redis_client, apikey):
-        raise HTTPException(429, "Rate limit exceeded")
-    if is_quota_exceeded(redis_client, apikey):
-        raise HTTPException(403, "Quota exceeded")
+    is_rate_limit, remaining_requests = is_rate_limited(redis_client, apikey)
+    if is_rate_limit:
+        raise HTTPException(429, "Rate limit exceeded", headers={"Retry-After": 60, "X-RateLimit-Limit": RATE_LIMIT, "X-RateLimit-Remaining": remaining_requests})
+    is_quota_exceed, remaining_quota = is_quota_exceeded(redis_client, apikey)
+    if is_quota_exceed:
+        raise HTTPException(429, "Quota exceeded", headers={"Retry-After": 86400, "X-Quota-Limit": QUOTA_LIMIT, "X-Quota-Remaining": remaining_quota})
     if not validate_key(apikey):
         raise HTTPException(401, "Invalid API key")
     if not apikey:

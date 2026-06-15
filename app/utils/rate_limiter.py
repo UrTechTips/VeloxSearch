@@ -39,10 +39,12 @@ def is_rate_limited(redis_client: redis.Redis, apikey: str, rate_limit: int = RA
     
     results = pipe.execute()
     current_count = results[2]
+
+    remaining_requests = rate_limit - current_count
     
     if current_count > rate_limit:
-        return True
-    return False
+        return True, remaining_requests
+    return False, remaining_requests
 
 def is_quota_exceeded(redis_client: redis.Redis, api_key: str, quota_limit: int = QUOTA_LIMIT, window: int = 86400) -> bool:
     """Checks if the given API key has exceeded the quota limit.
@@ -68,6 +70,9 @@ def is_quota_exceeded(redis_client: redis.Redis, api_key: str, quota_limit: int 
     results = pipe.execute()
     current_count = results[2]
 
+    # Remaining quota can be calculated as quota_limit - current_count if needed
+    remaining_quota = quota_limit - current_count
+
     if current_count > quota_limit:
-        return True
-    return False
+        return True, remaining_quota
+    return False, remaining_quota
