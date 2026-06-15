@@ -333,3 +333,21 @@ def test_list_datasets_for_user_returns_items(db_service):
     assert len(result["datasets"]) == 2
     dataset_ids = {row["id"] for row in result["datasets"]}
     assert dataset_ids == {"list_ds_1", "list_ds_2"}
+
+def test_update_dataset_index_status(db_service):
+    db_service.insert_user(
+        "update_owner",
+        name="Update Owner",
+        email="updateowner@example.com",
+    )
+    db_service.insert_dataset(
+        "update_ds",
+        "update_owner",
+        name="Update Dataset",
+        description="for update test",
+        length=5,
+        index_status="pending",
+    )
+    db_service.update_dataset_index_status("update_ds", "update_owner", "ready")
+    metadata = db_service.get_dataset_metadata("update_ds")
+    assert metadata["metadata"]["index_status"] == "ready"

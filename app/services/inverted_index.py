@@ -22,10 +22,20 @@ class InvertedIndex:
         """Generate Inverted Index for the given dataset."""
         self.dataset = dataset
         self.dataset_id = dataset.dataset_id
-        self.path = path if path is not None else f"data/{self.dataset_id}/inverted/"
+        self.path = path if path is not None else f"data/{self.dataset_id}/"
         self.index: Dict[str, Dict[str, int]] = {}
         self.doc_lengths: Dict[int, int] = {}
         self.total_docs: int = 0
+
+    def index_exists(self) -> bool:
+        """Check if the inverted index files exist.
+
+        Returns:
+            bool: True if both index files exist, False otherwise.
+        """
+        filepath_index = os.path.join(self.path, "inverted_index.json")
+        filepath_doc_lengths = os.path.join(self.path, "doc_lengths.json")
+        return os.path.exists(filepath_index) and os.path.exists(filepath_doc_lengths)
 
     def _process_document(self, document: Dict[str, Any]) -> tuple[int, List[str]]:
         """Process a single document to extract tokens.

@@ -1,4 +1,3 @@
-import logging
 from typing import List, Dict, Self
 from app.utils.redis_utils import publish_status
 
@@ -9,8 +8,6 @@ from app.services.indexer import Indexer
 from app.services.vector_search import VectorSearch
 from app.services.inverted_index import InvertedIndex
 
-
-Logger = logging.getLogger(__name__)
 
 class SearchService:
     def __init__(self, dataset_id: str, path: str = None) -> None:
@@ -30,6 +27,14 @@ class SearchService:
 
         self.bm25 = None
         self.ranker = None
+
+    def is_indexed(self) -> bool:
+        """Check if the dataset has already been indexed.
+
+        Returns:
+            bool: True if indexed, False otherwise.
+        """
+        return self.indexer.is_indexed()
 
     def index(self) -> Self:
         """Index the dataset using both BM25 and Vector Search.
@@ -103,4 +108,4 @@ class SearchService:
             data = self.dataset.get_document(doc_id)
             res.append(data)
 
-        return {"results": res, "meta": results}        
+        return {"results": res, "meta": results}

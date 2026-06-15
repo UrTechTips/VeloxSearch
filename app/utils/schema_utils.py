@@ -25,6 +25,9 @@ def schema_to_create_table_sql(table_name: str, schema: Dict) -> str:
 
         if field == primary_key:
             parts.append("PRIMARY KEY")
+        
+        if schema.get("auto_increment") == field:
+            parts.append("AUTOINCREMENT")
 
         if field in required:
             parts.append("NOT NULL")
@@ -102,3 +105,39 @@ def schema_to_insert_sql(table_name: str, schema: Dict, **values) -> Optional[Tu
     data_values = tuple(_format_sql_value(v) for v in values.values())
 
     return insert_str.strip(), data_values
+
+def schema_to_update_sql(table_name: str, schema: Dict, where_clause: str, where_values: Tuple, **values) -> Optional[Tuple[str, Tuple]]:
+    """
+    Generate SQL for updating rows in a table based on its schema.
+
+    Args:
+        table_name: The name of the table to update.
+        schema: The schema definition of the table.
+        where_clause: The WHERE clause to specify which rows to update (without the 'WHERE' keyword).
+        where_values: A tuple of values for the WHERE clause.
+        **values: The values to update, as keyword arguments.
+
+    Returns:
+        A tuple containing the SQL update statement and a tuple of values to update, or None if no values are provided.
+
+    Raises:
+        ValueError: If any provided field is not defined in the schema.
+    """
+    if not values:
+        return None
+
+    all_fields = set(schema.get("fields", []))
+    for field in values.keys():
+        if field not in all_fields:
+            raise ValueError(f"Field '{field}' is not defined in the schema for table '{table_name}'")
+
+    set_clauses = ", ".join([f"{field} = ?" for field in values.keys()])
+    update_str = f"""
+    UPDATE {table_name}
+    SET {set_clauses}
+    WHERE {where_clause};
+    """
+
+    data_values = tuple(_format_sql_value(v) for v in values.values()) + where_values
+
+    return update_str.strip(), data_values

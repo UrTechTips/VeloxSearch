@@ -21,6 +21,14 @@ class Indexer:
 
         self.inverted_index = InvertedIndex(self.dataset, path=self.path)
         self.vector_search = VectorSearch(self.dataset, self.dataset.get_vector_terms(), path=self.path)
+
+    def is_indexed(self) -> bool:
+        """Check if the dataset has already been indexed.
+
+        Returns:
+            bool: True if indexed, False otherwise.
+        """
+        return self.inverted_index.index_exists() and self.vector_search.index_exists()
     
     def build_index(self) -> Self:
         """Build the index for the dataset. And save it to disk.

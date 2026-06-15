@@ -1,15 +1,18 @@
 import os
-import math
-import logging
+import time
+import threading
 import hnswlib
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 from sentence_transformers import SentenceTransformer
 from app.services.dataset import Dataset
 
-logger = logging.getLogger(__name__)
+# TODO: Optimized initialization, Check if Searching needs optimization.
 
 class VectorSearch:
+    _shared_model: Optional[SentenceTransformer] = None
+    _model_lock = threading.Lock()
+
     def __init__(self, dataset: Dataset, vector_terms: Optional[List[str]] = None, path: Optional[str] = None):
         """Initialize the VectorSearch with dataset ID and vector terms.
 
@@ -21,15 +24,34 @@ class VectorSearch:
         self.dataset_id: str = dataset.dataset_id
         self.dataset = dataset
         self.vector_terms: List[str] = vector_terms if vector_terms is not None else []
-        self.path = path if path is not None else f"data/{self.dataset_id}/vector/"
+        self.path = path if path is not None else f"data/{self.dataset_id}/"
 
-        self.model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
+        start_time = time.perf_counter()
+        self.model = self._get_or_create_model()
+        model_time = time.perf_counter()
+        print(f"Model ready in {model_time - start_time:.2f} seconds.")
         self.dimensions = 384
         self.index: hnswlib.Index = hnswlib.Index(space='cosine', dim=self.dimensions)
+        index_time = time.perf_counter()
+        print(f"Index initialized in {index_time - model_time:.2f} seconds.")
 
         self.id_map: Dict[str, int] = {}
         self.reverse_id_map: Dict[int, str] = {}
         self.next_internal_id: int = 1
+
+    @classmethod
+    def _get_or_create_model(cls) -> SentenceTransformer:
+        # Use double-checked locking to avoid duplicate model loads under concurrency.
+        if cls._shared_model is None:
+            with cls._model_lock:
+                if cls._shared_model is None:
+                    cls._shared_model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
+        return cls._shared_model
+
+    @classmethod
+    def preload_model(cls) -> None:
+        """Eagerly load the embedding model once during app startup."""
+        cls._get_or_create_model()
 
     def build_index(self, batch_size: Optional[int] = 32) -> hnswlib.Index:
         """Build HNSWLib index from dataset. And save the index.
@@ -111,7 +133,7 @@ class VectorSearch:
             self.index.save_index(path_index)
             return True
         except IOError as e:
-            logger.error(f"Error saving vector index: {e}")
+            print(f"Error saving vector index: {e}")
             return False
 
     def load_index(self) -> bool:
@@ -131,7 +153,7 @@ class VectorSearch:
             self.index.load_index(path_index)
             return True
         except IOError as e:
-            logger.error(f"Error loading vector index: {e}")
+            print(f"Error loading vector index: {e}")
             return False
         
     def index_exists(self) -> bool:
@@ -172,4 +194,4 @@ class VectorSearch:
             if os.path.exists(self.path) and not os.listdir(self.path):
                 os.rmdir(self.path)
         except IOError as e:
-            logger.error(f"Error deleting vector index files: {e}")
+            print(f"Error deleting vector index files: {e}")

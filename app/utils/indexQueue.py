@@ -6,6 +6,7 @@ from typing import Any, List, Optional
 from app.services.search_service import SearchService
 from app.utils.redis_utils import publish_status
 
+
 def index_dataset(dataset_id: str):
     """Placeholder function to simulate dataset indexing. Replace with actual indexing logic.
 

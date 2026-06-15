@@ -1,6 +1,7 @@
 import os
 import json
 from typing import List, Dict, Optional, Self
+from genson import SchemaBuilder
 
 class Dataset:
     """A class to manage datasets, including loading, saving, and adding documents.
@@ -47,6 +48,22 @@ class Dataset:
             json.dump(data, f)
         with open(config_path, "w") as f:
             json.dump(self.config, f)
+        return self
+
+    def save_config(self, config: Dict) -> Self:
+        """Save the dataset configuration to a JSON file.
+
+        Args:
+            config (Dict): The configuration to save.
+
+        Returns:
+            Dataset: The current Dataset instance.
+        """
+        self.config = config
+        os.makedirs(self.path, exist_ok=True)
+        config_path = os.path.join(self.path, "config.json")
+        with open(config_path, "w") as f:
+            json.dump(config, f)
         return self
     
     def load_dataset(self) -> Self:
@@ -119,6 +136,30 @@ class Dataset:
         """
         documents = self.get_documents()
         for doc in documents:
-            if doc.get("id") == document_id:
+            if str(doc.get(self.config.get("id_field"))) == str(document_id):
                 return doc
         return None
+    
+    def parse_dataset(self) -> List[Dict]:
+        """Parse the dataset to extract the schema and return the documents.
+
+        Returns:
+            List[Dict]: The list of parsed documents.
+        """
+        builder = SchemaBuilder()
+        documents = self.get_documents()
+        for doc in documents:
+            builder.add_object(doc)
+        schema = builder.to_json()
+        print(schema)
+        return schema
+
+    def delete_dataset(self) -> None:
+        """Delete the dataset by removing the dataset directory and its contents."""
+        if os.path.exists(self.path):
+            for root, dirs, files in os.walk(self.path, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
+            os.rmdir(self.path)
