@@ -4,6 +4,8 @@
 
 VeloxSearch is a local-first hybrid search backend that combines BM25 lexical ranking with semantic vector search (SentenceTransformers + HNSWLib). It stores datasets and indexes on disk, exposes FastAPI routes for dataset and API-key management, and streams indexing progress via Redis-backed WebSockets.
 
+Frontend for VeloxSearch can be found at [Github](https://github.com/UrTechTips/VeloxSearchFrontend)
+
 ## Table of Contents
 
 - [What the project does](#what-the-project-does)
