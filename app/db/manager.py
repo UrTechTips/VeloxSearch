@@ -1,20 +1,20 @@
+import os
 import sqlite3
+from supabase import create_client, Client
 
 class DatabaseManager:
     def __init__(self, db_name: str):
-        if not db_name:
-            raise ValueError("Database name cannot be empty")
-        self.db_name = db_name
+        supabase_url = os.environ.get("SUPABASE_URL")
+        supabase_key = os.environ.get("SUPABASE_KEY")
+
+        if not supabase_url or not supabase_key:
+            raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables.")
+        
+        self.supabase: Client = create_client(supabase_url, supabase_key)
 
     def __enter__(self):
         """Allows use of 'with DatabaseManager(name) as conn:'"""
-        try:
-            self.connection = sqlite3.connect(self.db_name)
-            self.connection.row_factory = sqlite3.Row  # Enable dict-like access to rows
-            return self.connection
-        except sqlite3.Error as e:
-            raise ConnectionError(f"Database connection failed: {e}")
+        return self.supabase
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if hasattr(self, 'connection'):
-            self.connection.close()
+        pass

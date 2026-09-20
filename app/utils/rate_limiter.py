@@ -1,5 +1,4 @@
 import redis
-from app.core.redis_config import REDIS_HOST, REDIS_PORT
 from app.core.apikey_config import RATE_LIMIT, QUOTA_LIMIT
 
 # def is_rate_limited(redis_client: redis.Redis, apikey: str, rate_limit: int = RATE_LIMIT) -> bool:

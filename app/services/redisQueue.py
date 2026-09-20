@@ -5,16 +5,18 @@ from redis import Redis
 from app.utils.redis_utils import publish_status
 
 class IndexQueue:
-    def __init__(self, func: Callable, queue_name: str = "default", host: str = "localhost", port: int = 6379) -> None:
+    def __init__(self, func: Callable, queue_name: str = "default", client: Redis = None, url: str = "redis://localhost:6379/0") -> None:
         """Initializes a persistent indexing queue using Redis.
 
         Args:
             func (Callable): The function to be executed for each dataset ID enqueued. This function should accept a single argument, which is the dataset ID.
             queue_name (str, optional): The name of the Redis queue. Defaults to "default".
-            host (str, optional): The hostname of the Redis server. Defaults to "localhost".
-            port (int, optional): The port of the Redis server. Defaults to 6379.
+            url (str, optional): The Redis connection URL. Defaults to "redis://localhost:6379/0".
         """
-        self.redis_conn = Redis(host=host, port=port, decode_responses=False)
+        if client:
+            self.redis_conn = client
+        else:
+            self.redis_conn = Redis.from_url(url, decode_responses=False)
         self.function = func
         # is_async = True => jobs will be executed in background
         self.queue = RQQueue(name=queue_name, connection=self.redis_conn, is_async=True)

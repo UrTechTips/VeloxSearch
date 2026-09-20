@@ -9,8 +9,7 @@ from app.core import DATABASE_NAME
 
 def init_db():
     db_manager = DatabaseManager(DATABASE_NAME)
-    with db_manager as conn:
-        cursor = conn.cursor()
+    with db_manager as db:
         cursor.execute(schema_to_create_table_sql("users", user_schema))
         cursor.execute(schema_to_create_table_sql("datasets", dataset_schema))
         cursor.execute(schema_to_create_table_sql("apikeys", apikeys_schema))

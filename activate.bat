@@ -6,4 +6,4 @@ cls
 doskey clear=cls
 
 :: Activate your virtual environment
-call env\Scripts\activate
+call venv\Scripts\activate

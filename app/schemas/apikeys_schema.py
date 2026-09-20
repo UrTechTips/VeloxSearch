@@ -20,7 +20,7 @@ schema = {
         "name": "TEXT",
         "hashed_key": "TEXT",
         "encrypted_key": "TEXT",
-        "scopes": "TEXT", # TODO: Change to JSON when switching database
+        "scopes": "TEXT",
         "is_active": "BOOLEAN",
         "rate_limit": "INTEGER",
         "quota_limit": "INTEGER",

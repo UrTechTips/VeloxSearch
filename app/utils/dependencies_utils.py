@@ -1,11 +1,19 @@
-import jwt
+import os
+from jwt import PyJWKClient, decode as jwt_decode, PyJWTError
 import time
+from dotenv import load_dotenv
 from fastapi import Header, HTTPException, Request
 from app.core.apikey_config import RATE_LIMIT, QUOTA_LIMIT
 from app.core import JWT_SECRET, JWT_ALGORITHM
 from app.utils.api_utils import validate_key, get_dataset_id_from_apikey, get_dataset_id_from_apikey_hash
 from app.utils.rate_limiter import is_rate_limited, is_quota_exceeded
 from firebase_admin import auth
+from supabase import create_client, Client
+from app.db import service as database_service
+
+load_dotenv()
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+jwk_client = PyJWKClient(f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json")  
 
 def get_current_user(authorization: str = Header(...)):
     """Verifies the JWT token from the Authorization header and returns the user ID.
@@ -22,13 +30,22 @@ def get_current_user(authorization: str = Header(...)):
         str: The user ID extracted from the JWT token.
     """
     if not authorization.startswith("Bearer "):
+        print(f"Invalid token format: {authorization}", flush=True)
         raise HTTPException(401, "Invalid token")
-    
+
     token = authorization.split(" ")[1]
+    print(f"Verifying token: {token}", flush=True)
     try:
-        decoded_token = auth.verify_id_token(token)
-        return decoded_token['uid']
-    except Exception:
+        signing_key = jwk_client.get_signing_key_from_jwt(token)
+        decoded_token = jwt_decode(
+            token,
+            signing_key.key,
+            algorithms=["ES256", "RS256"],
+            audience="authenticated",
+        )
+        return decoded_token["sub"]
+    except PyJWTError as e:
+        print(f"JWT verify failed: {type(e).__name__}: {e}")
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     
 def get_apikey(authorization: str = Header(...), request: Request = None):
@@ -52,6 +69,8 @@ def get_apikey(authorization: str = Header(...), request: Request = None):
         raise HTTPException(401, "Invalid API key")
     
     apikey = authorization.split(" ")[1]
+    if database_service.is_apikey_deactivated(apikey):
+        raise HTTPException(401, "API key is deactivated")
     is_rate_limit, remaining_requests = is_rate_limited(redis_client, apikey)
     if is_rate_limit:
         raise HTTPException(429, "Rate limit exceeded", headers={"Retry-After": 60, "X-RateLimit-Limit": RATE_LIMIT, "X-RateLimit-Remaining": remaining_requests})
@@ -79,6 +98,12 @@ def validate_jwt(authorization: str = Header(...)):
     
     token = authorization.split(" ")[1]
     try:
-        auth.verify_id_token(token)
+        signing_key = jwk_client.get_signing_key_from_jwt(token)
+        decoded_token = jwt_decode(
+            token,
+            signing_key.key,
+            algorithms=["ES256", "RS256"],
+            audience="authenticated",
+        )
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired Token")

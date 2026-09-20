@@ -2,135 +2,233 @@
 
 ![Python](https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/framework-FastAPI-009688?logo=fastapi&logoColor=white) ![Pytest](https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white)
 
-VeloxSearch is a local-first hybrid search backend that combines BM25 lexical ranking with semantic vector search (SentenceTransformers + HNSWLib). It stores datasets and indexes on disk, exposes FastAPI routes for dataset and API-key management, and streams indexing progress via Redis-backed WebSockets.
+VeloxSearch is a Python backend for building and serving hybrid search indexes. It combines BM25 lexical retrieval with SentenceTransformers embeddings and an HNSW vector index, then merges the signals into one ranked result set. Datasets and generated indexes are stored on disk, while Supabase stores application metadata and Redis coordinates indexing work, caching, and rate limiting.
 
-## Table of Contents
+## Contents
 
 - [What the project does](#what-the-project-does)
 - [Why it is useful](#why-it-is-useful)
-- [Quickstart](#quickstart)
-- [Developer usage & examples](#developer-usage--examples)
+- [Getting started](#getting-started)
+- [Using the API](#using-the-api)
+- [Project layout](#project-layout)
 - [Where to get help](#where-to-get-help)
-- [Maintainers & contributing](#maintainers--contributing)
+- [Maintainers and contributing](#maintainers-and-contributing)
 
 ## What the project does
 
-- Stores datasets under `data/<dataset_id>/` and persists indexes to disk.
-- Builds an inverted index (BM25) and an HNSW vector index for semantic retrieval.
-- Provides a hybrid ranker that merges BM25 and vector scores.
-- Offers HTTP endpoints and WebSocket channels for indexing and search.
-- Uses Redis + RQ for background indexing and progress notifications.
-- Includes rate limiting (token-bucket) and API key / JWT protection for routes.
+VeloxSearch provides:
 
-Key code locations:
+- JSON dataset storage in `data/<dataset_id>/`.
+- Persistent inverted indexes for BM25 keyword search.
+- Persistent HNSW indexes for semantic vector search.
+- Hybrid ranking through the `SearchService`.
+- Dataset creation, upload, configuration, parsing, listing, and deletion routes.
+- JWT-protected user and dataset management.
+- Dataset-scoped API keys for search clients.
+- Redis-backed caching, token-bucket rate limiting, and RQ indexing jobs.
+- A WebSocket that reports indexing progress.
 
-- Application startup and routing: [app/main.py](app/main.py)
-- High-level search API: [app/services/search_service.py](app/services/search_service.py)
-- Index builder & loader: [app/services/indexer.py](app/services/indexer.py)
-- HTTP routers: [app/routers](app/routers)
-- Utilities and queueing: [app/utils](app/utils)
+The application is assembled in [app/main.py](app/main.py). Search orchestration lives in [app/services/search_service.py](app/services/search_service.py); dataset persistence is handled by [app/services/dataset.py](app/services/dataset.py); and index construction is handled by [app/services/indexer.py](app/services/indexer.py).
 
 ## Why it is useful
 
-- Combines lexical and semantic retrieval to improve relevance.
-- Runs fully locally — no external search service required.
-- Supports incremental indexing and persisted indexes for faster restarts.
-- Modular design: dataset management, indexing, ranking, and API layers are separated for easy extension.
+Hybrid retrieval handles both exact terms and meaning-based matches. BM25 is useful when a query contains an important product name, identifier, or phrase; vector retrieval helps when the query and document use different wording. The two indexes are persisted locally, so a loaded dataset can be searched without rebuilding its indexes after every restart.
 
-## Quickstart
+The code is split into API routers, storage/database services, queue utilities, and search services. That separation makes it practical to run the API as a service while testing the ranking and indexing components independently.
 
-Prerequisites
+## Getting started
 
-- Python 3.12+
-- Redis running at `localhost:6379`
+### Prerequisites
 
-Install
+- Python 3.12 or newer.
+- A Supabase project with the application tables available.
+- A Redis instance reachable through `REDIS_URL`.
+- Enough disk space for the SentenceTransformers model and generated indexes.
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
+### Install dependencies
+
+From the repository root:
+
+```powershell
+py -3.12 -m venv .venv
+\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-Environment
-
-Create a `.env` file or export these variables:
+On macOS or Linux, use `python3 -m venv .venv` and `source .venv/bin/activate` instead. The repository imports the `supabase` package, but it is not currently listed in `requirements.txt`; install it explicitly until the dependency manifest is updated:
 
 ```bash
-export JWT_SECRET="replace-me"
-export JWT_ALGORITHM="HS256"
-export API_KEY_SECRET="replace-me-too"
+python -m pip install supabase
 ```
 
-Initialize local DB (creates metadata for datasets, users, API keys):
+### Configure the environment
+
+Create a local `.env` file in the repository root. Do not commit it. Set the values for your own services:
+
+```dotenv
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-supabase-key
+REDIS_URL=redis://localhost:6379/0
+API_KEY_ENCRYPTION_KEY=your-fernet-key
+JWT_SECRET=your-jwt-secret
+JWT_ALGORITHM=HS256
+API_KEY_SECRET=your-api-key-secret
+POSTGRES=True
+```
+
+`SUPABASE_URL`, `SUPABASE_KEY`, `REDIS_URL`, and `API_KEY_ENCRYPTION_KEY` are required by the application path. `JWT_ALGORITHM` defaults to `HS256`; the Supabase JWT validation path also retrieves signing keys from the Supabase URL. Generate a Fernet-compatible encryption key with:
 
 ```bash
-python scripts/init_db.py
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-Run services
+The checked-in `.gitignore` excludes `.env`, local database files, API-key fixtures, and generated `data/*`. Keep credentials and generated indexes out of source control.
+
+### Start the API and worker
+
+Start Redis first, then run the API from the repository root:
 
 ```bash
-# start Redis in one terminal
-redis-server
-
-# start the API server
-uvicorn app.main:app --host localhost --port 8000 --reload
-
-# start the indexing worker in a third terminal
-rq worker index_queue
+uvicorn app.main:app --host localhost --port 8080 --reload
 ```
 
-Run tests
+In a second terminal, activate the same virtual environment and start the RQ worker:
 
 ```bash
-pytest -q tests/
+rq worker --worker-class rq.worker.SimpleWorker --url "$REDIS_URL" index_queue
 ```
 
-## Developer usage & examples
+On Windows, `start_worker.bat` reads `.env` and starts the worker. The application preloads the embedding model during startup, so the first launch may take longer and may download model files.
 
-Use the Python classes directly for experiments and scripting:
+The API is available at `http://localhost:8080`. FastAPI's interactive documentation is available at `http://localhost:8080/docs` once the server is running.
 
-```python
-from app.services.search_service import SearchService
+### Run the tests
 
-docs = [
-  {"id":"1","title":"Apple iPhone","description":"Smartphone"},
+```bash
+python -m pytest -q tests
+```
+
+The service-level tests cover tokenization, BM25, vector search, ranking, dataset persistence, and index persistence. API and rate-limit tests may require live Supabase/Redis services and their test fixtures.
+
+> **Current setup note:** `scripts/init_db.py` and parts of the database test suite still contain SQLite-oriented code, while the runtime `DatabaseManager` uses Supabase. Treat Supabase table creation and schema setup as a deployment prerequisite; the initializer should be considered unfinished until that migration is completed.
+
+## Using the API
+
+The management routes use a Supabase JWT in the `Authorization` header. Search uses a dataset-scoped API key in the same header.
+
+### Create and upload a dataset
+
+```bash
+curl -X POST "http://localhost:8080/dataset/create" \
+  -H "Authorization: Bearer <supabase-jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"database_name":"products","description":"Product catalog"}'
+```
+
+Use the returned `dataset_id` to upload a JSON array of documents:
+
+```bash
+curl -X POST "http://localhost:8080/dataset/upload" \
+  -H "Authorization: Bearer <supabase-jwt>" \
+  -F "id=<dataset-id>" \
+  -F "file=@products.json;type=application/json"
+```
+
+Each document should have an identifier field. A typical `products.json` file is:
+
+```json
+[
+  {"id": "p-001", "title": "Running shoes", "description": "Lightweight daily trainers"},
+  {"id": "p-002", "title": "Trail backpack", "description": "Water-resistant hiking pack"}
 ]
-
-svc = SearchService(dataset_id="products", path="data/products")
-svc.dataset.config = {"searchable_fields":["title","description"], "vector_terms":["title","description"]}
-svc.dataset.save_dataset(docs)
-svc.index()
-print(svc.search("apple phone", top_k=5))
 ```
 
-HTTP endpoints (protected): `/dataset`, `/index`, `/apikey`, `/search`.
+### Configure and index
 
-Example curl (replace tokens):
+Upload a configuration describing the fields used for lexical and vector retrieval:
 
 ```bash
-curl -X POST "http://localhost:8000/apikey/generate?dataset_id=products" -H "Authorization: Bearer <jwt-token>"
-curl -X POST "http://localhost:8000/search/query?query=apple%20laptop" -H "Authorization: Bearer <api-key>"
+curl -X POST "http://localhost:8080/dataset/config" \
+  -H "Authorization: Bearer <supabase-jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"id":"<dataset-id>","config":"{\"searchable_fields\":[\"title\",\"description\"],\"vector_terms\":[\"title\",\"description\"],\"length\":2,\"id_field\":\"id\"}"}'
 ```
 
-Indexing progress is streamed from the `/index/` WebSocket; the worker publishes progress via Redis channels.
+Open a WebSocket connection to `ws://localhost:8080/index/`, then send the following JSON message to queue indexing and receive progress events:
+
+```json
+{"token":"<supabase-jwt>","id":"<dataset-id>"}
+```
+
+The worker builds both indexes and publishes status messages through Redis. A dataset must be indexed before it can be searched.
+
+### Generate an API key and search
+
+Generate a key with a management JWT. The key is returned only from this operation, so store it securely:
+
+```bash
+curl -X POST "http://localhost:8080/apikey/generate?name=local-client&dataset_id=<dataset-id>" \
+  -H "Authorization: Bearer <supabase-jwt>"
+```
+
+Then query the indexed dataset:
+
+```bash
+curl -X POST "http://localhost:8080/search/query?query=lightweight%20shoes&limit=5" \
+  -H "Authorization: Bearer <api-key>"
+```
+
+The response contains the matching documents and ranking metadata. Search responses are cached in Redis for one hour. The global middleware advertises rate-limit headers, and API-key requests are also subject to the configured per-key rate and quota limits.
+
+### Route summary
+
+| Area | Routes | Authentication |
+| --- | --- | --- |
+| Users | `/users/register`, `/users/registered` | JWT |
+| Datasets | `/dataset/create`, `/dataset/upload`, `/dataset/config`, `/dataset/parse/{id}`, `/dataset/list`, `/dataset/get/{id}`, `/dataset/delete/{id}` | JWT |
+| API keys | `/apikey/generate`, `/apikey/deactivate`, `/apikey/list` | JWT |
+| Indexing | `/index/` and the `/index/` WebSocket | JWT in WebSocket payload |
+| Search | `/search/query` | Dataset API key |
+
+Detailed request and response behavior is defined by the routers in [app/routers](app/routers) and can be explored through `/docs`.
+
+## Project layout
+
+```text
+app/
+  core/       Environment-backed application settings
+  db/         Supabase database manager and metadata service
+  routers/    FastAPI HTTP and WebSocket routes
+  schemas/    User, dataset, API-key, usage, and feedback schemas
+  services/   Dataset storage, BM25, vector search, ranking, and queues
+  utils/      Authentication, hashing, rate limiting, and Redis helpers
+data/         Local datasets and generated indexes (ignored by Git)
+scripts/      Project utility scripts
+tests/        API, database, service, and utility tests
+```
+
+For a module dependency overview, see [dependency_graph.mmd](dependency_graph.mmd).
 
 ## Where to get help
 
-- Inspect the implementation in [app/services](app/services) and [app/routers](app/routers).
-- Run and read the tests in [tests](tests) for concrete examples of expected behavior.
-- See [dependency_graph.mmd](dependency_graph.mmd) for a module overview.
-- Open an issue or PR on the repository for questions and bug reports.
+- Start with the interactive API documentation at `/docs` while the API is running.
+- Read the route implementations in [app/routers](app/routers) for authentication and payload details.
+- Read the focused tests in [tests](tests) for expected indexing and ranking behavior.
+- Review [app/services](app/services) for the search pipeline and persisted file format.
+- Use the repository issue tracker for reproducible bugs and setup questions.
 
-## Maintainers & contributing
+Do not include credentials, `.env` contents, generated indexes, or private API keys in issues or pull requests.
 
-Maintainer: Sai Sreenadh Chilukuri
+## Maintainers and contributing
 
-Contributions welcome — prefer small, focused PRs with tests. Before opening a PR:
+VeloxSearch is maintained by **Sai Sreenadh Chilukuri**.
 
-- Run `pytest -q tests/` and ensure new tests pass.
-- Keep changes scoped and document behavior in code or tests.
+Contributions are welcome. For a focused change:
 
-If you want to contribute a larger design or feature, open an issue first to discuss the approach.
+1. Open an issue for a substantial feature or design change.
+2. Make the smallest change that addresses the issue and add or update focused tests.
+3. Run `python -m pytest -q tests` from the repository root.
+4. Explain environment requirements and any Supabase or Redis behavior in the pull request.
+
+Please keep secrets out of commits and avoid committing generated files under `data/`. A separate `CONTRIBUTING.md` can provide longer project-specific conventions when the contribution process grows.
