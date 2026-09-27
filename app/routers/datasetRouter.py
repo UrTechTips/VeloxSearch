@@ -120,9 +120,8 @@ def parse_dataset(id: str, user_id: str = Depends(get_current_user)):
         raise HTTPException(status_code=400, detail={"message": f"Failed to parse dataset! Error: {e}", "success": False})
 
 @router.post("/delete/{id}")
-def delete_dataset(request: DatasetDeleteRequest, user_id: str = Depends(get_current_user)):
+def delete_dataset(id: str, user_id: str = Depends(get_current_user)):
     try:
-        id = request.id
         if not id:
             raise HTTPException(status_code=400, detail={"message": "Dataset ID is required!", "success": False})
         if database_service.validate_dataset_id(id, user_id) is False:
@@ -132,4 +131,4 @@ def delete_dataset(request: DatasetDeleteRequest, user_id: str = Depends(get_cur
         database_service.delete_dataset(id, user_id)
         return JSONResponse(content={"message": f"Deleted dataset {id}!", "success": True}, media_type="application/json", status_code=200)
     except Exception as e:
-        raise HTTPException(status_code=400, detail={"message": f"Failed to delete dataset! Error: {e}", "success": False})
+        raise JSONResponse(content={"message": f"Failed to delete dataset! Error: {e}", "success": False}, media_type="application/json", status_code=400)
