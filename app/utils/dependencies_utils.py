@@ -7,7 +7,7 @@ from app.core.apikey_config import RATE_LIMIT, QUOTA_LIMIT
 from app.core import JWT_SECRET, JWT_ALGORITHM
 from app.utils.api_utils import validate_key, get_dataset_id_from_apikey, get_dataset_id_from_apikey_hash
 from app.utils.rate_limiter import is_rate_limited, is_quota_exceeded
-from firebase_admin import auth
+from app.utils.hash_utils import apihash
 from supabase import create_client, Client
 from app.db import service as database_service
 
@@ -34,7 +34,7 @@ def get_current_user(authorization: str = Header(...)):
         raise HTTPException(401, "Invalid token")
 
     token = authorization.split(" ")[1]
-    print(f"Verifying token: {token}", flush=True)
+    # print(f"Verifying token: {token}", flush=True) #TODO: Remove debug print
     try:
         signing_key = jwk_client.get_signing_key_from_jwt(token)
         decoded_token = jwt_decode(
@@ -69,7 +69,7 @@ def get_apikey(authorization: str = Header(...), request: Request = None):
         raise HTTPException(401, "Invalid API key")
     
     apikey = authorization.split(" ")[1]
-    if database_service.is_apikey_deactivated(apikey):
+    if database_service.is_apikey_deactivated(apihash(apikey)):
         raise HTTPException(401, "API key is deactivated")
     is_rate_limit, remaining_requests = is_rate_limited(redis_client, apikey)
     if is_rate_limit:

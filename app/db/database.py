@@ -95,8 +95,9 @@ class DatabaseService:
             bool: True if the API key is deactivated, False otherwise.
         """
         with self.db_manager as db:
+            print(f"Checking if API key is deactivated for hash: {api_hashed_key}")  # TODO: Remove this debug
             result = db.table("api_keys").select("is_active").eq("hashed_key", api_hashed_key).execute()
-            if not result:
+            if not result or len(result.data) == 0:
                 print(f"No API key found for hash: {api_hashed_key}")
                 return True  # If the API key doesn't exist, treat it as deactivated
             is_active = result.data[0]["is_active"]
@@ -275,12 +276,14 @@ class DatabaseService:
                 print(f"Error inserting apikey: {e}")
                 return False
 
-    def deactivate_apikey(self, apikey_hash: str, owner_id: str) -> bool:
+    def deactivate_apikey(self, apikey_id: str, owner_id: str) -> bool:
         with self.db_manager as db:
             try:
-                db.table("api_keys").update({"is_active": False}).eq("hashed_key", apikey_hash).eq("owner_id", owner_id).execute()
+                print("Deactivating API key with hash:", apikey_id, "for owner_id:", owner_id)  # TODO: Remove this debug
+                db.table("api_keys").update({"is_active": False}).eq("id", apikey_id).eq("owner_id", owner_id).execute()
                 return True
             except Exception as e:
+                print(f"Error deactivating API key: {e}")
                 raise HTTPException(status_code=400, detail={"message": f"Error deactivating API key: {e}"})
             
     def insert_usage(self, apikey_hash: str, endpoint: str, latency: float, query_hash: str) -> bool:
