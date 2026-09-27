@@ -7,7 +7,7 @@ schema = {
         "position",
     ],
     "types": {
-        "id": "INTEGER",
+        "id": "SERIAL",
         "dataset_id": "TEXT",
         "query_hash": "TEXT",
         "clicked_doc_id": "TEXT",
@@ -17,7 +17,7 @@ schema = {
     "required_fields": ["id", "dataset_id", "query_hash", "clicked_doc_id", "position"],
     "optional_fields": [],
     "unique_fields": ["id", "dataset_id", "query_hash", "clicked_doc_id"],
-    "auto_increment": "id",
+    "auto_increment": "",
     "foreign_keys": [
         {
             "field": "dataset_id",

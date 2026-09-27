@@ -2,6 +2,7 @@ import time
 import redis
 import hashlib
 from typing import Optional
+from app.core import REDIS_URL
 
 TOKEN_BUCKET_SCRIPT = """
 local key = KEYS[1]
@@ -78,11 +79,7 @@ class TokenBucket:
         refill_interval: float = 1.0
     ):
         """Initialize the token bucket rate limiter."""
-        self.redis = redis_client or redis.Redis(
-            host='localhost',
-            port=6379,
-            decode_responses=True
-        )
+        self.redis = redis_client or redis.Redis(REDIS_URL, decode_responses=True)
         self.capacity = capacity
         self.refill_rate = refill_rate
         self.refill_interval = refill_interval

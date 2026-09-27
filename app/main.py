@@ -1,24 +1,27 @@
+import os
+from dotenv import load_dotenv
 import redis
 import uvicorn
-import firebase_admin
 from contextlib import asynccontextmanager
-from app.core import REDIS_HOST, REDIS_PORT
+from app.core import REDIS_URL
 from app.utils.indexQueue import index_dataset
 from fastapi import FastAPI, Request, Response
 from app.services.redisQueue import IndexQueue
 from app.services.token_bucket import TokenBucket
 from fastapi.middleware.cors import CORSMiddleware
 from app.services.vector_search import VectorSearch
-from firebase_admin import credentials, initialize_app
 from .routers import indexRouter, datasetRouter, apikeyRouter, searchRouter, userRouter
+from supabase import create_client, Client
+
+load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         VectorSearch.preload_model()
-        redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+        redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
         token_bucket = TokenBucket(redis_client, 100, 1, 1)
-        index_queue = IndexQueue(index_dataset, "index_queue")
+        index_queue = IndexQueue(index_dataset, "index_queue", client = redis_client)
         print("Connected to Redis")
         app.state.redis_client = redis_client
         app.state.index_queue = index_queue
@@ -29,8 +32,11 @@ async def lifespan(app: FastAPI):
         print(f"Error during lifespan: {e}")
 
 app = FastAPI(lifespan=lifespan)
-cred = credentials.Certificate("firebaseCred.json")
-firebase_admin.initialize_app(cred)
+
+supabase: Client = create_client(
+    os.environ.get("SUPABASE_URL"),
+    os.environ.get("SUPABASE_KEY")
+)
 
 origins = [
     "http://localhost:3000",

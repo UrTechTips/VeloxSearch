@@ -53,7 +53,7 @@ def validate_key(api_key: str) -> bool:
     db = DatabaseService(DatabaseManager(DATABASE_NAME))
     return db.validate_apikey(hash)
 
-def deactivate_key(api_key: str, owner_id: str) -> bool:
+def deactivate_key(api_key_id: str, owner_id: str) -> bool:
     """Deactivates an API key in the database.
 
     Args:
@@ -63,10 +63,9 @@ def deactivate_key(api_key: str, owner_id: str) -> bool:
     Returns:
         bool: True if the API key was successfully deactivated, False otherwise.
     """
-    hash = apihash(api_key)
 
     db = DatabaseService(DatabaseManager(DATABASE_NAME))
-    return db.deactivate_apikey(hash, owner_id)
+    return db.deactivate_apikey(api_key_id, owner_id)
 
 def get_dataset_id_from_apikey(api_key: str) -> str:
     """Retrieves the dataset ID associated with a given API key. The function handles the hashing of API key.

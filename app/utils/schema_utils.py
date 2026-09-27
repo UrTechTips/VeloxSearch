@@ -1,5 +1,10 @@
 import json
+import os
 from typing import Dict, Optional, Tuple, List, Any
+from dotenv import load_dotenv
+load_dotenv()  
+
+postgress = True if str(os.getenv("POSTGRES", "False")).lower() == "true" else False
 
 def schema_to_create_table_sql(table_name: str, schema: Dict) -> str:
     """

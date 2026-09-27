@@ -46,13 +46,16 @@ def get_dataset_metadata(id: str, user_id: str = Depends(get_current_user)):
     try:
         if database_service.validate_dataset_id(id, user_id) is False:
             raise HTTPException(status_code=403, detail={"message": "You do not have permission to access this dataset!"})
-        metadata = database_service.get_dataset_metadata(id)['metadata']
+        metadata = database_service.get_dataset_metadata(id)['metadata']['id']
         usage_quota = database_service.get_dataset_usagequota(id)
         usage_rate = database_service.get_dataset_useagerate(id)
         metadata["usage_quota"] = usage_quota
         metadata["usage_rate"] = usage_rate
         return JSONResponse(content={"message": f"Metadata for dataset {id}!", "metadata": metadata, "success": True}, media_type="application/json", status_code=200)
     except Exception as e:
+        # Print call stack
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail={"message": f"Failed to get dataset metadata! Error: {e}", "success": False})
 
 @router.get("/list")
@@ -86,6 +89,7 @@ def upload_dataset(id: str = Form(...), file: UploadFile = File(), user_id: str 
         data = json.load(file.file)
         dataset = Dataset(id)
         dataset.save_dataset(data)
+        print(len(data))
         database_service.update_dataset(id, user_id, index_status="uploaded", length=len(data))
         return JSONResponse(content={"message": "Dataset uploaded successfully!", "success": True}, media_type="application/json", status_code=200)
     except Exception as e:
@@ -116,9 +120,8 @@ def parse_dataset(id: str, user_id: str = Depends(get_current_user)):
         raise HTTPException(status_code=400, detail={"message": f"Failed to parse dataset! Error: {e}", "success": False})
 
 @router.post("/delete/{id}")
-def delete_dataset(request: DatasetDeleteRequest, user_id: str = Depends(get_current_user)):
+def delete_dataset(id: str, user_id: str = Depends(get_current_user)):
     try:
-        id = request.id
         if not id:
             raise HTTPException(status_code=400, detail={"message": "Dataset ID is required!", "success": False})
         if database_service.validate_dataset_id(id, user_id) is False:
@@ -128,4 +131,4 @@ def delete_dataset(request: DatasetDeleteRequest, user_id: str = Depends(get_cur
         database_service.delete_dataset(id, user_id)
         return JSONResponse(content={"message": f"Deleted dataset {id}!", "success": True}, media_type="application/json", status_code=200)
     except Exception as e:
-        raise HTTPException(status_code=400, detail={"message": f"Failed to delete dataset! Error: {e}", "success": False})
+        raise JSONResponse(content={"message": f"Failed to delete dataset! Error: {e}", "success": False}, media_type="application/json", status_code=400)

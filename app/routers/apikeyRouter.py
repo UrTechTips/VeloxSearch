@@ -1,7 +1,11 @@
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import JSONResponse
 from app.utils.api_utils import generate_key, deactivate_key, list_keys
 from app.utils.dependencies_utils import get_current_user
+from pydantic import BaseModel
+
+class ApiKeyDeactivateRequest(BaseModel):
+    api_key_id: str
 
 router = APIRouter(
     prefix="/apikey",
@@ -16,8 +20,9 @@ def generate_apikey(name: str, dataset_id: str, user_id: str = Depends(get_curre
     return JSONResponse(content={"message": "API key generated successfully!", "api_key": api_key, "success": True}, media_type="text/plain", status_code=201)
 
 @router.post("/deactivate")
-def deactivate_apikey(api_key: str, user_id: str = Depends(get_current_user)):
-    success = deactivate_key(api_key, user_id)
+def deactivate_apikey(request: ApiKeyDeactivateRequest, user_id: str = Depends(get_current_user)):
+    api_key_id = request.api_key_id
+    success = deactivate_key(api_key_id, user_id)
     if success:
         return JSONResponse(content={"message": "API key deactivated successfully!", "success": True}, media_type="text/plain", status_code=200)
     else:
