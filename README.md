@@ -4,7 +4,13 @@
 
 VeloxSearch is a Python backend for building and serving hybrid search indexes. It combines BM25 lexical retrieval with SentenceTransformers embeddings and an HNSW vector index, then merges the signals into one ranked result set. Datasets and generated indexes are stored on disk, while Supabase stores application metadata and Redis coordinates indexing work, caching, and rate limiting.
 
+<<<<<<< HEAD
 ## Contents
+=======
+Frontend for VeloxSearch can be found at [Github](https://github.com/UrTechTips/VeloxSearchFrontend)
+
+## Table of Contents
+>>>>>>> origin/main
 
 - [What the project does](#what-the-project-does)
 - [Why it is useful](#why-it-is-useful)
@@ -226,9 +232,13 @@ VeloxSearch is maintained by **Sai Sreenadh Chilukuri**.
 
 Contributions are welcome. For a focused change:
 
+<<<<<<< HEAD
 1. Open an issue for a substantial feature or design change.
 2. Make the smallest change that addresses the issue and add or update focused tests.
 3. Run `python -m pytest -q tests` from the repository root.
 4. Explain environment requirements and any Supabase or Redis behavior in the pull request.
 
 Please keep secrets out of commits and avoid committing generated files under `data/`. A separate `CONTRIBUTING.md` can provide longer project-specific conventions when the contribution process grows.
+=======
+If you want to contribute a larger design or feature, open an issue first to discuss the approach.
+>>>>>>> origin/main
